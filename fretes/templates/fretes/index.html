@@ -1,0 +1,36 @@
+{% extends "fretes/base.html" %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-md-4">
+    <a href="{% url 'fretes:pedido_list' %}" class="text-decoration-none">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Cadastrar Pedidos</h5>
+          <p class="text-muted">Cadastre pedidos e volumes (L×A×C×Qtd). O m³ é calculado automaticamente.</p>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'fretes:calcular' %}" class="text-decoration-none">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Calcular Fretes</h5>
+          <p class="text-muted">Selecione pedido, informe dados da nota e gere o valor do frete.</p>
+        </div>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'fretes:relatorios' %}" class="text-decoration-none">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Relatórios</h5>
+          <p class="text-muted">Filtre cálculos e exporte em Excel ou PDF.</p>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

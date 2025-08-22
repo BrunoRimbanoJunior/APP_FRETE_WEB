@@ -1,0 +1,7 @@
+<datalist id="pedidos-datalist">
+  {% for p in qs %}
+    <option value="{{ p.numero_pedido }}">
+      {{ p.numero_pedido }}{% if p.carrier %} — {{ p.carrier }}{% endif %} (m³ {{ p.m3 }})
+    </option>
+  {% endfor %}
+</datalist>

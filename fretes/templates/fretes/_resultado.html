@@ -1,0 +1,35 @@
+{% if resultado %}
+  <div class="card border-success">
+    <div class="card-body">
+      <h6 class="card-title">Resultado</h6>
+      <ul class="mb-0">
+        <li><strong>Pedido:</strong> {{ pedido.numero_pedido }}</li>
+        <li><strong>Transportadora:</strong> {{ carrier }}</li>
+        <li><strong>m³:</strong> {{ resultado.m3 }}</li>
+        <li><strong>Peso cúbico:</strong> {{ resultado.peso_cubico }} kg</li>
+        <li><strong>Peso usado:</strong> {{ resultado.peso_usado }} kg</li>
+        <li><strong>Total:</strong> R$ {{ resultado.frete_total }}</li>
+      </ul>
+    </div>
+  </div>
+
+{% elif form and form.errors %}
+  <div class="alert alert-danger mb-2">
+    <!-- erros gerais (ex.: "Pedido não encontrado ...") -->
+    {% for err in form.non_field_errors %}
+      <div>{{ err }}</div>
+    {% endfor %}
+  </div>
+
+  <!-- Sugestão: cadastrar pedido com o número digitado -->
+  <a
+    class="btn btn-sm btn-outline-primary"
+    href="{% url 'fretes:pedido_create' %}?numero_pedido={{ form.data.numero_pedido|default:''|urlencode }}"
+    target="_blank" rel="noopener"
+  >
+    Cadastrar pedido “{{ form.data.numero_pedido|default:'(vazio)' }}”
+  </a>
+
+{% else %}
+  <div class="text-muted">Preencha o formulário e clique em Calcular.</div>
+{% endif %}
