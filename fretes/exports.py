@@ -1,11 +1,28 @@
+
+from io import BytesIO
 from django.http import HttpResponse
 from openpyxl import Workbook
-from .models import FreteCalculado
-from io import BytesIO
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+
+def _rows_from_queryset(queryset):
+    rows = []
+    for f in queryset:
+        rows.append([
+            f.data_calculo.strftime("%d/%m/%Y") if f.data_calculo else "",
+            f.numero_pedido,
+            f.numero_nota or "",
+            f.valor_nota or 0,
+            f.kg_nota,
+            str(f.carrier),
+            f.m3,
+            f.peso_cubico,
+            f.peso_usado,
+            f.frete_total,
+        ])
+    return rows
 
 def exportar_fretes_excel(queryset):
     wb = Workbook()
@@ -16,45 +33,26 @@ def exportar_fretes_excel(queryset):
                "m³", "Peso Cúbico", "Peso Usado", "Total (R$)"]
     ws.append(headers)
 
-    for f in queryset:
-        ws.append([
-            f.data_calculo.isoformat(),
-            f.numero_pedido,
-            f.numero_nota,
-            float(f.valor_nota or 0),
-            float(f.kg_nota),
-            f.carrier.nome if f.carrier else "",
-            float(f.m3),
-            float(f.peso_cubico),
-            float(f.peso_usado),
-            float(f.frete_total),
-        ])
+    for row in _rows_from_queryset(queryset):
+        ws.append(row)
 
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
     resp = HttpResponse(
-        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     resp["Content-Disposition"] = 'attachment; filename="fretes.xlsx"'
-    wb.save(resp)
     return resp
-
-
-
 
 def exportar_fretes_pdf(queryset):
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
 
-    data = [["Data","Pedido","Nota","Valor Nota","KG Nota","Transportadora","m³","Peso Cúbico","Peso Usado","Total (R$)"]]
-    for f in queryset:
-        data.append([
-            f.data_calculo.isoformat(),
-            f.numero_pedido,
-            f.numero_nota,
-            f.valor_nota or 0,
-            f.kg_nota,
-            f.carrier.nome if f.carrier else "",
-            f.m3, f.peso_cubico, f.peso_usado, f.frete_total
-        ])
+    headers = ["Data", "Pedido", "Nota", "Valor Nota", "KG Nota", "Transportadora",
+               "m³", "Peso Cúbico", "Peso Usado", "Total (R$)"]
+    data = [headers] + _rows_from_queryset(queryset)
 
     table = Table(data, repeatRows=1)
     table.setStyle(TableStyle([
@@ -69,12 +67,11 @@ def exportar_fretes_pdf(queryset):
     ]))
 
     styles = getSampleStyleSheet()
-    title = Paragraph("Relatório de Fretes", styles["Title"])
-    story = [title, table]
+    story = [Paragraph("Relatório de Fretes", styles["Title"]), Spacer(1, 8), table]
     doc.build(story)
 
     pdf = buf.getvalue()
     buf.close()
     resp = HttpResponse(pdf, content_type="application/pdf")
-    resp["Content-Disposition"] = 'attachment; filename="fretes.pdf"'
+    resp["Content-Disposition"] = 'attachment; filename=\"fretes.pdf\"'
     return resp

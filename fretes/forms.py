@@ -1,3 +1,4 @@
+
 from django import forms
 from django.forms import ModelForm
 from .models import Carrier, Pedido, PedidoVolume
@@ -12,16 +13,23 @@ class CalcularFreteForm(forms.Form):
     def clean(self):
         data = super().clean()
         numero_pedido = data.get("numero_pedido")
+        if not numero_pedido:
+            raise forms.ValidationError("Informe o número do pedido.")
+
         try:
             pedido = Pedido.objects.get(numero_pedido=numero_pedido)
         except Pedido.DoesNotExist:
-            raise forms.ValidationError("Pedido não encontrado. Cadastre o pedido ou verifique o número.")
-        carrier = data.get("carrier") or (pedido.carrier if pedido else None)
+            raise forms.ValidationError("Pedido não encontrado. Cadastre o pedido antes de calcular.")
+
+        carrier = data.get("carrier") or pedido.carrier
         if not carrier:
             raise forms.ValidationError("Selecione uma transportadora ou vincule uma ao pedido.")
+
         data["pedido"] = pedido
         data["carrier"] = carrier
         return data
+
+
 
 class PedidoForm(ModelForm):
     class Meta:

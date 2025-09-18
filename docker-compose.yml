@@ -7,6 +7,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data      # ✅ caminho correto
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     networks: [fretes_net]
 
@@ -21,9 +23,19 @@ services:
       DATABASE_URL: postgres://fretes:${POSTGRES_PASSWORD}@db:5432/fretes
       GUNICORN_WORKERS: 3
     volumes:
-      - staticfiles:/app/staticfiles         # ✅ volume nomeado
+        - ./fretes:/app/fretes
+        - ./APP_FRETE_WEB:/app/APP_FRETE_WEB
+        - ./manage.py:/app/manage.py
+        # Remova a linha abaixo se não precisar coletar staticos
+        - staticfiles:/app/staticfiles       # ✅ volume nomeado
     restart: unless-stopped
     networks: [fretes_net]
+    command: >
+      uv run gunicorn APP_FRETE_WEB.wsgi:application
+      --bind 0.0.0.0:8000
+      --access-logfile -
+      --error-logfile -
+      --log-level debug
 
   nginx:
     image: nginx:1.27-alpine
@@ -42,3 +54,5 @@ volumes:                                      # ✅ DEFINIÇÃO dos volumes
 
 networks:
   fretes_net:
+
+

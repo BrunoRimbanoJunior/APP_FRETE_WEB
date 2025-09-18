@@ -1,13 +1,14 @@
+
 from decimal import Decimal
 
-def calcular_frete(pedido, carrier, kg_nota: Decimal, valor_nota: Decimal|None):
+def calcular_frete(pedido, carrier, kg_nota: Decimal, valor_nota: Decimal | None):
     tab = carrier.tabela
     m3 = pedido.m3 or Decimal("0")
     fator = tab.fator_peso_cubico or Decimal("230")
     peso_cubico = (m3 * fator).quantize(Decimal("0.01"))
     peso_usado = max(Decimal(kg_nota or 0), Decimal(peso_cubico or 0))
 
-    # tarifa por faixa
+    # Faixas de preço
     if peso_usado <= 50:
         base = tab.peso_ate_50
     elif peso_usado <= 100:
@@ -25,10 +26,17 @@ def calcular_frete(pedido, carrier, kg_nota: Decimal, valor_nota: Decimal|None):
     if valor_nota and tab.frete_valor_perc:
         adicional_valor = (Decimal(valor_nota) * tab.frete_valor_perc) / Decimal(100)
 
-    total = max(base, tab.frete_minimo) + (tab.pedagio or 0) + adicional_valor
+    # 💡 Lógica corrigida para o pedágio
+    pedagio = Decimal("0")
+    if tab.pedagio:
+        pedagio = (peso_usado / Decimal(100)) * tab.pedagio
+
+    total = max(base, tab.frete_minimo) + pedagio + adicional_valor
     total = Decimal(total).quantize(Decimal("0.01"))
 
     return {
-        "m3": m3, "peso_cubico": peso_cubico, "peso_usado": peso_usado,
-        "frete_total": total
+        "m3": m3,
+        "peso_cubico": peso_cubico,
+        "peso_usado": peso_usado,
+        "frete_total": total,
     }

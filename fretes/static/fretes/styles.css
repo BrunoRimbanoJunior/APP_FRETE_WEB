@@ -1,0 +1,163 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f4f4f4;
+    font-size: 1.8em;
+}
+
+.btn {
+    min-width: 120px;
+    font-size: 1em;
+    font-family: inherit;
+    text-transform: uppercase;
+    font-weight: bold;
+    padding: 10px 15px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    height: 45px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Classes específicas para cores */
+.btn-adicionar {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-salvar {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-voltar {
+    background-color: #6c757d;
+    color: white;
+    text-decoration: none;
+}
+
+.container {
+    width: 90%;
+    max-width: 1400px;
+    margin: 20px auto;
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+}
+
+.form-col {
+    flex: 1;
+    min-width: 250px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    font-size: 1.2em;
+    height: 45px;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background: #ccc;
+    margin: 20px 0;
+}
+
+.volume-container {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: #fafafa;
+}
+
+.volume-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.volume-header h4 {
+    margin: 0;
+    color: #555;
+}
+
+.volume-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.volume-field {
+    flex: 1;
+    min-width: 100px;
+}
+
+.volume-field label {
+    display: block;
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.delete-checkbox-label {
+    font-size: 0.9em;
+    color: #dc3545;
+    margin-left: 5px;
+}
+
+.button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Regras para telas pequenas (smartphones) */
+@media (max-width: 600px) {
+    .container {
+        width: 100%;
+        padding: 10px;
+        margin: 0;
+    }
+    .form-row, .volume-fields, .button-container {
+        flex-direction: column;
+        gap: 0;
+    }
+    .form-col, .volume-field {
+        min-width: 100%;
+    }
+    .volume-field {
+        margin-bottom: 10px;
+    }
+    .volume-field label {
+        font-size: 1.1em;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+        font-size: 1.1em;
+        padding: 12px;
+    }
+    .btn {
+        width: 100%;
+        min-width: 100%;
+        margin-bottom: 10px;
+    }
+    .btn-voltar {
+        margin-left: 0;
+    }
+}
