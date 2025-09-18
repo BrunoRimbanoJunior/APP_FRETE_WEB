@@ -10,8 +10,24 @@ __pycache__/
 .env.*
 .venv
 # Django
-staticfiles/
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Python/Django
+__pycache__/
+*.py[cod]
+*.sqlite3
 media/
+staticfiles/
+# venv
+.venv/
+# Segredos
+.env
+.env.*
+deploy/.env.prod
+
 # VSCode
 .vscode/
 # Docker
