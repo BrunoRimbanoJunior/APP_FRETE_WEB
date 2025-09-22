@@ -5,9 +5,7 @@ on:
     branches: [hotfix/principal]
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ lower(github.repository) }}
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -30,5 +28,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ghcr.io/${{ github.repository | lower }}:latest
+            ghcr.io/${{ github.repository | lower }}:${{ github.sha }}
