@@ -23,7 +23,7 @@ services:
       GUNICORN_TIMEOUT: "60"
     depends_on:
       - db
-    ports:
+    expose:
       - "8000"
     command: >
       sh -c "
