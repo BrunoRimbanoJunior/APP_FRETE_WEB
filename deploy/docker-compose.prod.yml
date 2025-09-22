@@ -16,6 +16,7 @@ services:
     
     environment:
       DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}  # O Portainer vai substituir
       DJANGO_DEBUG: ${DJANGO_DEBUG}
       POSTGRES_DB: ${POSTGRES_DB}
@@ -35,6 +36,15 @@ services:
         python manage.py collectstatic --noinput &&
         gunicorn fretes_web.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
       "
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8082:80"              # publica no host
+    volumes:
+      - ./nginx:/etc/nginx/conf.d:ro
+    depends_on: [ web ]
     restart: unless-stopped
   
 volumes:
