@@ -7,8 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ toLowerCase(github.repository) }}
-
+  IMAGE_NAME: ${{ lower(github.repository) }}
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
