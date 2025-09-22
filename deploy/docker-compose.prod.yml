@@ -1,26 +1,38 @@
 services:
-  web:
-    image: ghcr.io/${GITHUB_OWNER:-OWNER}/${REPO_NAME:-APP_FRETE_WEB}:web-latest
-    env_file: .env.prod
-    depends_on:
-      - db
-    ports:
-      - "8000:8000"     # ajuste se usar nginx à frente
-    restart: always
-
   db:
     image: postgres:16-alpine
-    env_file: .env.prod
+    env_file:
+      - ./env.prod
     volumes:
       - pgdata:/var/lib/postgresql/data
-    restart: always
+    restart: unless-stopped
 
-  # opcional: nginx reverso na frente do web
-  # nginx:
-  #   image: ghcr.io/OWNER/APP_FRETE_WEB:nginx-latest
-  #   depends_on: [web]
-  #   ports: ["80:80"]
-  #   restart: always
+  web:
+    image: ghcr.io/brunorimbanojunior/app_frete_web:web-latest
+    
+    environment:
+      DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}  # O Portainer vai substituir
+      DJANGO_DEBUG: ${DJANGO_DEBUG}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      GUNICORN_WORKERS: "4"
+      GUNICORN_TIMEOUT: "60"
+    depends_on:
+      - db
+    expose:
+      - "8000"
+    command: >
+      sh -c "
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        gunicorn fretes_web.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
+      "
+    restart: unless-stopped
 
+  
 volumes:
   pgdata:

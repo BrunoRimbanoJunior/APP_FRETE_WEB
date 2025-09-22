@@ -1,58 +1,51 @@
+
 services:
   db:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: fretes
-      POSTGRES_USER: fretes
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    env_file:
+      - .env.dev
     volumes:
-      - pgdata:/var/lib/postgresql/data      # ✅ caminho correto
-    ports:
-      - "5432:5432"
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Use $$ para NÃO expandir no parse do compose; expande dentro do container
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
-    networks: [fretes_net]
 
   web:
-    build: .
-    depends_on: [db]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
     environment:
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: "0"
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
-      DATABASE_URL: postgres://fretes:${POSTGRES_PASSWORD}@db:5432/fretes
-      GUNICORN_WORKERS: 3
-    volumes:
-        - ./fretes:/app/fretes
-        - ./APP_FRETE_WEB:/app/APP_FRETE_WEB
-        - ./manage.py:/app/manage.py
-        # Remova a linha abaixo se não precisar coletar staticos
-        - staticfiles:/app/staticfiles       # ✅ volume nomeado
+      DJANGO_SETTINGS_MODULE: fretes_web.settings.dev
+      # Opcional: sobrescrever workers/timeouts em dev
+      GUNICORN_WORKERS: "2"
+      GUNICORN_TIMEOUT: "60"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # sobe gunicorn em 8000 (ver entrypoint)
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    expose:
+      - "8000"
     restart: unless-stopped
-    networks: [fretes_net]
-    command: >
-      uv run gunicorn APP_FRETE_WEB.wsgi:application
-      --bind 0.0.0.0:8000
-      --access-logfile -
-      --error-logfile -
-      --log-level debug
-
   nginx:
-    image: nginx:1.27-alpine
-    depends_on: [web]
+    image: nginx:alpine
     ports:
       - "80:80"
     volumes:
-      - staticfiles:/app/staticfiles:ro      # ✅ mesmo volume lido em RO
-      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx:/etc/nginx/conf.d:ro
+    depends_on:
+      - web
     restart: unless-stopped
-    networks: [fretes_net]
 
-volumes:                                      # ✅ DEFINIÇÃO dos volumes
+volumes:
   pgdata:
-  staticfiles:
-
-networks:
-  fretes_net:
-
-
