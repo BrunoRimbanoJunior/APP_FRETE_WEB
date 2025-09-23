@@ -43,7 +43,7 @@ services:
     ports:
       - "8082:80"              # publica no host
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/conf.d:/etc/nginx/conf.d:ro
     depends_on: [ web ]
     restart: unless-stopped
   
