@@ -1,8 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    env_file:
-      - ./deploy/.env.prod
+    
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fretes}
       POSTGRES_USER: ${POSTGRES_USER:-fretes}
