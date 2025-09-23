@@ -18,8 +18,14 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": "INFO"},
 }
-ALLOWED_HOSTS = ["10.1.1.104"]  
-CSRF_TRUSTED_ORIGINS = [h for h in os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if h]
+# Allow configuring hosts via environment variable (comma-separated)
+# Example: ALLOWED_HOSTS=example.com,10.1.1.104,localhost
+_allowed_hosts_env = os.getenv("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env if h.strip()] or ["10.1.1.104"]
+
+# Support both DJANGO_CSRF_TRUSTED_ORIGINS and CSRF_TRUSTED_ORIGINS
+_csrf_origins_env = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS") or os.getenv("CSRF_TRUSTED_ORIGINS", "")
+CSRF_TRUSTED_ORIGINS = [h.strip() for h in _csrf_origins_env.split(",") if h.strip()]
 
 
 INSTALLED_APPS = [
