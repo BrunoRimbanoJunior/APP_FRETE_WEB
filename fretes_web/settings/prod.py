@@ -4,6 +4,8 @@ from urllib.parse import urlparse
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Project root (folder that contains manage.py and top-level 'static/')
+PROJECT_ROOT = BASE_DIR.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-secret-key")
 # DEBUG is true when DJANGO_DEBUG == "1"
@@ -101,7 +103,9 @@ USE_TZ = True
 # Static
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+# Include top-level /app/static directory
+_top_static = PROJECT_ROOT / "static"
+STATICFILES_DIRS = [_top_static] if _top_static.exists() else []
 STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}
 }
