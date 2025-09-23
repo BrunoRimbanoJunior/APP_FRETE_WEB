@@ -1,8 +1,8 @@
 services:
   db:
     image: postgres:16-alpine
-    #env_file:
-    #  - ./env.prod
+    env_file:
+      - ./deploy/.env.prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fretes}
       POSTGRES_USER: ${POSTGRES_USER:-fretes}
@@ -13,7 +13,7 @@ services:
 
   web:
     image: ghcr.io/brunorimbanojunior/app_frete_web:latest
-    
+
     environment:
       DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
