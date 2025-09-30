@@ -60,8 +60,8 @@
                             {{ f.quantidade }}
                         </div>
                         <div class="volume-field">
-                            <label>Volume</label>
-                            <input type="text" value="{{ forloop.counter }}" disabled>
+                            <label>Volumes</label>
+                            <input type="text" class="volume-total" value="" disabled>
                         </div>
                     </div>
                     {{ f.id }}
@@ -113,15 +113,26 @@
                         <label>Quantidade</label>
                         <input type="number" name="vol-__prefix__-quantidade" id="id_vol-__prefix__-quantidade" required value="1">
                     </div>
-                    <div class="volume-field">
-                        <label>Volume</label>
-                        <input type="text" value="" disabled>
-                    </div>
+                        <div class="volume-field">
+                            <label>Volumes</label>
+                            <input type="text" class="volume-total" value="" disabled>
+                        </div>
                 </div>
                 <input type="hidden" name="vol-__prefix__-id" id="id_vol-__prefix__-id">
             </div>
         `;
 
+        function recalcVolumesTotal() {
+            const qtyInputs = document.querySelectorAll("input[name^='vol-'][name$='-quantidade']");
+            let total = 0;
+            qtyInputs.forEach(inp => {
+                const v = parseInt(inp.value || '0', 10);
+                if (!isNaN(v)) total += v;
+            });
+            document.querySelectorAll('.volume-total').forEach(el => { el.value = total; });
+        }
+
+        // Recalcula ao adicionar linhas
         addButton.addEventListener('click', function() {
             let formCount = parseInt(managementForm.value);
             let newFormHtml = newVolumeTemplate.replace(/__prefix__/g, formCount);
@@ -130,10 +141,23 @@
             
             let newForm = volumesContainer.lastElementChild;
             newForm.querySelector('h4').textContent = `Volume ${formCount + 1}`;
-            newForm.querySelector('input[type="text"][disabled]').value = formCount + 1;
             
             managementForm.value = formCount + 1;
+
+            // Ouvir alterações de quantidade na nova linha
+            const qtyInput = newForm.querySelector(`input[name='vol-${formCount}-quantidade']`);
+            if (qtyInput) {
+                qtyInput.addEventListener('input', recalcVolumesTotal);
+            }
+            recalcVolumesTotal();
         });
+
+        // Listeners iniciais para quantidades existentes
+        document.querySelectorAll("input[name^='vol-'][name$='-quantidade']").forEach(inp => {
+            inp.addEventListener('input', recalcVolumesTotal);
+        });
+        // Primeira atualização na carga
+        recalcVolumesTotal();
       });
     </script>
 </div>

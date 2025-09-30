@@ -90,3 +90,68 @@ class FreteCalculado(models.Model):
     def __str__(self) -> str:
         return f"{self.numero_pedido} - {self.carrier} - {self.frete_total}"
 
+
+# Novos cadastros
+class Produto(models.Model):
+    codigo = models.CharField("Código", max_length=60, unique=True)
+    descricao = models.CharField("Descrição", max_length=255)
+    peso_bruto_kg = models.DecimalField("Peso bruto (kg)", max_digits=10, decimal_places=3, default=0)
+    peso_liquido_kg = models.DecimalField("Peso líquido (kg)", max_digits=10, decimal_places=3, default=0)
+    largura_cm = models.DecimalField("Largura (cm)", max_digits=8, decimal_places=2, default=0)
+    altura_cm = models.DecimalField("Altura (cm)", max_digits=8, decimal_places=2, default=0)
+    comprimento_cm = models.DecimalField("Comprimento (cm)", max_digits=8, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["codigo"]
+        verbose_name = "Produto"
+        verbose_name_plural = "Produtos"
+
+    def __str__(self) -> str:
+        return f"{self.codigo} - {self.descricao}"
+
+
+class Cliente(models.Model):
+    nome = models.CharField("Nome", max_length=255)
+    cnpj = models.CharField("CNPJ", max_length=20, unique=True)
+    endereco = models.CharField("Endereço", max_length=255, blank=True)
+    cidade = models.CharField("Cidade", max_length=120, blank=True)
+    estado = models.CharField("Estado", max_length=2, blank=True)
+    email = models.EmailField("Email", blank=True)
+    telefone = models.CharField("Telefone", max_length=40, blank=True)
+
+    class Meta:
+        ordering = ["nome"]
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+
+    def __str__(self) -> str:
+        return f"{self.nome} ({self.cnpj})"
+
+
+class Garantia(models.Model):
+    STATUS_EM_ABERTO = "em_aberto"
+    STATUS_ATENDIDO = "atendido"
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="garantias")
+    codigo_peca = models.CharField("Código da peça", max_length=80)
+    defeito = models.TextField("Defeito")
+    numero_lote = models.CharField("Número do lote", max_length=80, blank=True)
+    nota_recebida = models.CharField("Nota recebida", max_length=80)
+    valor = models.DecimalField("Valor", max_digits=12, decimal_places=2, default=0)
+    data_recebimento = models.DateField("Data de recebimento")
+    nota_retorno = models.CharField("Nota de retorno", max_length=80, blank=True)
+    data_retorno = models.DateField("Data de retorno", null=True, blank=True)
+    mao_de_obra = models.BooleanField("Com mão de obra", default=False)
+    valor_mao_de_obra = models.DecimalField("Valor mão de obra", max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["-data_recebimento", "-id"]
+        verbose_name = "Garantia"
+        verbose_name_plural = "Garantias"
+
+    def __str__(self) -> str:
+        return f"Garantia {self.id} - {self.cliente}"
+
+    @property
+    def status(self) -> str:
+        return self.STATUS_ATENDIDO if self.nota_retorno else self.STATUS_EM_ABERTO

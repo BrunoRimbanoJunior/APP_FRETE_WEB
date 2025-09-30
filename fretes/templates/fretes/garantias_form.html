@@ -1,0 +1,145 @@
+{% extends "fretes/base.html" %}
+{% block title %}{% if is_new %}Nova{% else %}Editar{% endif %} Garantia{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <h5 class="mb-3">{% if is_new %}Nova{% else %}Editar{% endif %} Garantia</h5>
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <!-- Parte 1: Nota, Cliente e Data de entrada -->
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.nota_recebida.label }}</label>
+      <div class="col-sm-9">{{ form.nota_recebida }}{% if form.nota_recebida.errors %}<div class="text-danger small">{{ form.nota_recebida.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-2">
+      <label class="col-sm-3 col-form-label">Buscar cliente</label>
+      <div class="col-sm-9 d-flex gap-2">
+        <input type="text" id="cliente-search" class="form-control" placeholder="CNPJ ou nome">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{% url 'fretes:clientes_options' %}"
+                hx-target="#id_cliente"
+                hx-swap="innerHTML"
+                hx-include="#cliente-search,#id_cliente">Buscar</button>
+        <a class="btn btn-outline-primary" href="{% url 'fretes:cliente_create' %}" target="_blank">Cadastrar cliente</a>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.cliente.label }}</label>
+      <div class="col-sm-9">
+        {{ form.cliente }}
+        {% if form.cliente.errors %}
+          <div class="text-danger small mt-1">{{ form.cliente.errors|join:', ' }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <label class="col-sm-3 col-form-label">{{ form.data_recebimento.label }}</label>
+      <div class="col-sm-9">{{ form.data_recebimento }}{% if form.data_recebimento.errors %}<div class="text-danger small">{{ form.data_recebimento.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <!-- Parte 2: Produto e demais campos -->
+    <div class="row mb-2">
+      <label class="col-sm-3 col-form-label">Buscar produto</label>
+      <div class="col-sm-9 d-flex gap-2">
+        <input type="text" id="produto-searCÛdigo ou descriÁ„o">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{% url 'fretes:produtos_options' %}"
+                hx-target="#id_codigo_peca_select"
+                hx-swap="innerHTML"
+                hx-include="#produto-search,#id_codigo_peca_select">Buscar</button>
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.codigo_peca.label }}</label>
+      <div class="col-sm-9">
+        <select name="codigo_peca" id="id_codigo_peca_select" class="form-select"
+                hx-get="{% url 'fretes:produto_descricao' %}"
+                hx-trigger="load, change"
+                hx-target="#descricao-container"
+                hx-swap="outerHTML"
+                hx-include="#id_codigo_peca_select">
+          {% include 'fretes/_produto_options.html' with qs=produtos value=form.codigo_peca.value %}
+        </select>
+        {% if form.codigo_peca.errors %}<div class="text-danger small">{{ form.codigo_peca.errors|join:', ' }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="row mb-3" id="descricao-container"
+         hx-get="{% url 'fretes:produto_descricao' %}"
+         hx-trigger="load"
+         hx-target="#descricao-container"
+         hx-swap="outerHTML"
+         hx-include="#id_codigo_peca_select">
+      <label class="col-sm-3 col-form-label">Descri√ß√£o do produto</label>
+      <div class="col-sm-9">
+        {% include 'fretes/_produto_descricao.html' with descricao='' %}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.numero_lote.label }}</label>
+      <div class="col-sm-9">{{ form.numero_lote }}{% if form.numero_lote.errors %}<div class="text-danger small">{{ form.numero_lote.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.defeito.label }}</label>
+      <div class="col-sm-9">{{ form.defeito }}{% if form.defeito.errors %}<div class="text-danger small">{{ form.defeito.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.valor.label }}</label>
+      <div class="col-sm-9">{{ form.valor }}{% if form.valor.errors %}<div class="text-danger small">{{ form.valor.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-2 align-items-center">
+      <label class="col-sm-3 col-form-label">{{ form.mao_de_obra.label }}</label>
+      <div class="col-sm-9">
+        <div class="form-check">
+          {{ form.mao_de_obra }}
+          <label class="form-check-label" for="id_mao_de_obra">Marcar se h√° m√£o de obra</label>
+        </div>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.valor_mao_de_obra.label }}</label>
+      <div class="col-sm-9">{{ form.valor_mao_de_obra }}{% if form.valor_mao_de_obra.errors %}<div class="text-danger small">{{ form.valor_mao_de_obra.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.nota_retorno.label }}</label>
+      <div class="col-sm-9">{{ form.nota_retorno }}{% if form.nota_retorno.errors %}<div class="text-danger small">{{ form.nota_retorno.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="row mb-4">
+      <label class="col-sm-3 col-form-label">{{ form.data_retorno.label }}</label>
+      <div class="col-sm-9">{{ form.data_retorno }}{% if form.data_retorno.errors %}<div class="text-danger small">{{ form.data_retorno.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'fretes:garantia_list' %}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+<script>
+  (function(){
+    function toggleMao(){
+      var cb = document.getElementById('id_mao_de_obra');
+      var v = document.getElementById('id_valor_mao');
+      if (!cb || !v) return;
+      v.disabled = !cb.checked;
+    }
+    document.addEventListener('change', function(e){ if(e.target && e.target.id==='id_mao_de_obra'){ toggleMao(); }});
+    document.addEventListener('DOMContentLoaded', toggleMao);
+  })();
+ </script>
+
+
+

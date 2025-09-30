@@ -2,68 +2,37 @@
 {% block title %}Pedidos{% endblock %}
 {% block content %}
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 20px;
-        background-color: #f4f4f4;
-    }
-    .container {
-        max-width: 800px;
-        margin: auto;
-        background: #fff;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 20px;
-    }
-    th, td {
-        padding: 10px;
-        text-align: left;
-        border-bottom: 1px solid #ddd;
-    }
-    tr:hover {
-        background-color: #f5f5f5;
-    }
-    a.btn {
-        text-decoration: none;
-        padding: 8px 12px;
-        border-radius: 4px;
-        font-size: 0.9em;
-    }
-    a.btn-primary {
-        background-color: #007bff;
-        color: white;
-    }
-    a.btn-outline-secondary {
-        background-color: white;
-        color: #6c757d;
-        border: 1px solid #6c757d;
-    }
-    /* Estilos responsivos */
-    @media (max-width: 600px) {
-        .container {
-            padding: 10px;
-        }
-    }
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .actions { white-space: nowrap; }
+    @media (max-width: 600px) { .filter-row { flex-direction: column; gap: 8px; align-items: stretch !important; } }
+    .w-240 { width: 240px; }
+    .w-160 { width: 160px; }
 </style>
 <div class="container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h5 style="margin: 0;">Pedidos</h5>
+    <div class="d-flex filter-row" style="justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+        <h5 class="m-0">Pedidos</h5>
+        <form method="get" class="d-flex gap-2">
+            <input type="text" name="q" value="{{ q }}" class="form-control w-240" placeholder="Filtrar por nº do pedido">
+            <button class="btn btn-outline-secondary w-160" type="submit">Filtrar</button>
+        </form>
         <a class="btn btn-primary" href="{% url 'fretes:pedido_create' %}">Novo Pedido</a>
     </div>
+
+    {% if has_filter and count == 0 %}
+      <div class="alert alert-warning">Nenhum pedido encontrado para "{{ q }}".</div>
+    {% endif %}
 
     <div class="table-responsive">
         <table class="table table-striped table-sm">
             <thead>
                 <tr>
-                    <th>#</th><th>Pedido</th><th>Picking</th><th>Transportadora</th><th>m³</th><th></th>
+                    <th>#</th>
+                    <th>Pedido</th>
+                    <th>Picking</th>
+                    <th>Transportadora</th>
+                    <th>m³</th>
+                    <th>Volumes</th>
+                    <th class="actions">Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -74,12 +43,21 @@
                     <td>{{ p.picking }}</td>
                     <td>{{ p.carrier }}</td>
                     <td>{{ p.m3 }}</td>
-                    <td>
-                        <a class="btn btn-outline-secondary" href="{% url 'fretes:pedido_update' p.id %}">Editar</a>
+                    <td>{{ p.total_volumes|default:0 }}</td>
+                    <td class="actions">
+                        <a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:pedido_update' p.id %}">Editar</a>
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" style="text-align: center;">Sem pedidos cadastrados.</td></tr>
+                <tr>
+                  <td colspan="7" class="text-center">
+                    {% if has_filter %}
+                      Nenhum pedido encontrado para "{{ q }}".
+                    {% else %}
+                      Sem pedidos cadastrados.
+                    {% endif %}
+                  </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

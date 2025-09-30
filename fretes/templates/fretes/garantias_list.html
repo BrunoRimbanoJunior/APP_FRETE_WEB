@@ -1,0 +1,97 @@
+{% extends "fretes/base.html" %}
+{% block title %}Garantias{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="m-0">Controle de Garantias</h5>
+    <a class="btn btn-primary" href="{% url 'fretes:garantia_create' %}">Nova Garantia</a>
+  </div>
+
+  <form method="get" class="mb-3">
+    <div class="row gy-2 gx-2 align-items-end">
+      <div class="col-12 col-sm-6 col-md-3">
+        <label for="id_nota" class="form-label">Nº Nota (recebida/retorno)</label>
+        <input type="text" name="nota" id="id_nota" value="{{ nota }}" class="form-control" placeholder="Nº Nota">
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label for="id_cnpj_f" class="form-label">CNPJ</label>
+        <input type="text" name="cnpj" id="id_cnpj_f" value="{{ cnpj }}" class="form-control" placeholder="CNPJ">
+      </div>
+      <div class="col-12 col-sm-6 col-md-6">
+        <label for="id_nome_f" class="form-label">Nome do cliente</label>
+        <input type="text" name="nome" id="id_nome_f" value="{{ nome }}" class="form-control" placeholder="Nome do cliente">
+      </div>
+    </div>
+
+    <div class="row gy-2 gx-2 align-items-end mt-1">
+      <div class="col-6 col-sm-6 col-md-3">
+        <label class="form-label">Data inicial</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-6 col-sm-6 col-md-3">
+        <label class="form-label">Data final</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="" {% if not status %}selected{% endif %}>Todos</option>
+          <option value="em_aberto" {% if status == 'em_aberto' %}selected{% endif %}>Em aberto</option>
+          <option value="atendido" {% if status == 'atendido' %}selected{% endif %}>Atendido</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-md-3 d-flex gap-2">
+        <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="mb-3 d-flex gap-2">
+    <a class="btn btn-success btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}export=xlsx">Exportar Excel</a>
+    <a class="btn btn-danger btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}export=pdf">Exportar PDF</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-sm">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cliente</th>
+          <th>Cód. Peça</th>
+          <th>Nota Recebida</th>
+          <th>Valor</th>
+          <th>Recebido em</th>
+          <th>Nota Retorno</th>
+          <th>Retorno em</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in garantias %}
+          <tr>
+            <td>{{ g.id }}</td>
+            <td>{{ g.cliente.nome }} ({{ g.cliente.cnpj }})</td>
+            <td>{{ g.codigo_peca }}</td>
+            <td>{{ g.nota_recebida }}</td>
+            <td>{{ g.valor }}</td>
+            <td>{{ g.data_recebimento }}</td>
+            <td>{{ g.nota_retorno }}</td>
+            <td>{{ g.data_retorno }}</td>
+            <td>
+              {% if g.status == 'atendido' %}
+                <span class="badge bg-success">Atendido</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Em aberto</span>
+              {% endif %}
+            </td>
+            <td><a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:garantia_update' g.id %}">Editar</a></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10" class="text-center">Sem registros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

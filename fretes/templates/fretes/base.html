@@ -17,9 +17,22 @@
         </div>
         <div class="d-flex align-items-center">
           <a class="menu-link" href="{% url 'fretes:pedido_list' %}">PEDIDOS</a>
+          <a class="menu-link" href="{% url 'fretes:produto_list' %}">PRODUTOS</a>
+          <a class="menu-link" href="{% url 'fretes:cliente_list' %}">CLIENTES</a>
+          <a class="menu-link" href="{% url 'fretes:garantia_list' %}">GARANTIAS</a>
           <a class="menu-link" href="{% url 'fretes:calcular' %}">CALCULAR</a>
           <a class="menu-link" href="{% url 'fretes:relatorios' %}">RELATORIOS</a>
-          <a class="menu-link" href="/admin/">CONFIG</a>
+          <div class="cfg-dropdown">
+            <a class="menu-link" href="#">CONFIG ▾</a>
+            <div class="cfg-menu">
+              <a href="/admin/">Admin</a>
+              {% if request.user.is_staff %}
+              <a href="{% url 'fretes:admin_import_produtos' %}">Importar Produtos</a>
+              <a href="{% url 'fretes:admin_import_clientes' %}">Importar Clientes</a>
+              <a href="{% url 'fretes:admin_template_clientes' %}">Baixar Template Clientes</a>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </nav>
@@ -48,6 +61,30 @@
       }
 
       .brand-logo { height: 28px; }
+      .cfg-dropdown { position: relative; margin-left: 20px; }
+      .cfg-dropdown .cfg-menu {
+        display: none;
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: #ffffff;
+        border: 1px solid #e2e2e2;
+        border-radius: 6px;
+        min-width: 220px;
+        padding: 6px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        z-index: 1000;
+      }
+      .cfg-dropdown:hover .cfg-menu { display: block; }
+      .cfg-dropdown .cfg-menu a {
+        display: block;
+        text-decoration: none;
+        color: #333;
+        padding: 6px 10px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .cfg-dropdown .cfg-menu a:hover { background: #f2f6fc; }
 </style>
 
     <main class="container">

@@ -1,0 +1,6 @@
+<datalist id="produtos-datalist">
+  {% for p in qs %}
+    <option value="{{ p.codigo }}">{{ p.codigo }} - {{ p.descricao }}</option>
+  {% endfor %}
+</datalist>
+

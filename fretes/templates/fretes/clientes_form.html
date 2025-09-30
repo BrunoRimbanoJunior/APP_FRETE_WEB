@@ -1,0 +1,51 @@
+{% extends "fretes/base.html" %}
+{% block title %}{% if is_new %}Novo{% else %}Editar{% endif %} Cliente{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <h5 class="mb-3">{% if is_new %}Novo{% else %}Editar{% endif %} Cliente</h5>
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.nome.label }}</label>
+      <div class="col-sm-9">{{ form.nome }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.cnpj.label }}</label>
+      <div class="col-sm-9">{{ form.cnpj }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.endereco.label }}</label>
+      <div class="col-sm-9">{{ form.endereco }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.cidade.label }}</label>
+      <div class="col-sm-9">{{ form.cidade }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.estado.label }}</label>
+      <div class="col-sm-9">{{ form.estado }}</div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.email.label }}</label>
+      <div class="col-sm-9">{{ form.email }}</div>
+    </div>
+
+    <div class="row mb-4">
+      <label class="col-sm-3 col-form-label">{{ form.telefone.label }}</label>
+      <div class="col-sm-9">{{ form.telefone }}</div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'fretes:cliente_list' %}">Voltar</a>
+    </div>
+  </form>
+  
+</div>
+{% endblock %}

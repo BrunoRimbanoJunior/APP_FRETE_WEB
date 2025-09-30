@@ -42,7 +42,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx:/etc/nginx/conf.d:ro
+      - ./deploy/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       - web
     restart: unless-stopped

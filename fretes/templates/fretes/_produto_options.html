@@ -1,0 +1,8 @@
+{% for p in qs %}
+  {% if value and value == p.codigo %}
+    <option value="{{ p.codigo }}" selected>{{ p.codigo }} - {{ p.descricao }}</option>
+  {% else %}
+    <option value="{{ p.codigo }}">{{ p.codigo }} - {{ p.descricao }}</option>
+  {% endif %}
+{% endfor %}
+

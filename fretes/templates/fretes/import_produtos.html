@@ -1,0 +1,19 @@
+{% extends "fretes/base.html" %}
+{% block title %}Importar Produtos{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 720px;">
+  <h5 class="mb-3">Importar Produtos (Excel)</h5>
+  <div class="alert alert-info">
+    Estrutura esperada do arquivo (.xlsx), com cabeçalho na primeira linha:
+    <code>CODIGO, DESCRIÇÃO, MONTADORA, APLICAÇÃO, PESO BRUTO, PESO LIQUIDO, EMBALAGEM, ALTURA (CM), LARGURA (CM), COMPRIMENTO (CM)</code>.
+    <br>Campos usados: CODIGO, DESCRIÇÃO, APLICAÇÃO, PESO BRUTO, PESO LIQUIDO, ALTURA (CM), LARGURA (CM), COMPRIMENTO (CM).
+    <br>DESCRIÇÃO será gravada como <b>DESCRIÇÃO + espaço + APLICAÇÃO</b> (se houver APLICAÇÃO).
+  </div>
+  <form method="post" enctype="multipart/form-data" class="d-flex gap-2">
+    {% csrf_token %}
+    <input type="file" name="arquivo" accept=".xlsx,.xls" class="form-control" required>
+    <button class="btn btn-primary" type="submit">Importar</button>
+  </form>
+</div>
+{% endblock %}
+

@@ -1,7 +1,7 @@
 
 from django import forms
 from django.forms import ModelForm
-from .models import Carrier, Pedido, PedidoVolume
+from .models import Carrier, Pedido, PedidoVolume, Produto, Cliente, Garantia
 
 class CalcularFreteForm(forms.Form):
     numero_pedido = forms.CharField(label="Pedido")
@@ -40,3 +40,142 @@ class PedidoVolumeForm(ModelForm):
     class Meta:
         model = PedidoVolume
         fields = ["largura_cm", "altura_cm", "comprimento_cm", "quantidade"]
+
+
+class ProdutoForm(ModelForm):
+    class Meta:
+        model = Produto
+        fields = [
+            "codigo", "descricao", "peso_bruto_kg", "peso_liquido_kg",
+            "largura_cm", "altura_cm", "comprimento_cm"
+        ]
+        widgets = {
+            "descricao": forms.TextInput(attrs={"class": "form-control"}),
+            "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "peso_bruto_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
+            "peso_liquido_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
+            "largura_cm": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "altura_cm": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            "comprimento_cm": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+        }
+
+
+class ClienteForm(ModelForm):
+    class Meta:
+        model = Cliente
+        fields = ["nome", "cnpj", "endereco", "cidade", "estado", "email", "telefone"]
+        widgets = {
+            "nome": forms.TextInput(attrs={"class": "form-control"}),
+            "cnpj": forms.TextInput(attrs={"class": "form-control"}),
+            "endereco": forms.TextInput(attrs={"class": "form-control"}),
+            "cidade": forms.TextInput(attrs={"class": "form-control"}),
+            "estado": forms.TextInput(attrs={"class": "form-control", "maxlength": 2}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+            "telefone": forms.TextInput(attrs={"class": "form-control"}),
+        }
+
+
+class GarantiaForm(ModelForm):
+    class Meta:
+        model = Garantia
+        fields = [
+            "cliente", "codigo_peca", "defeito", "numero_lote",
+            "nota_recebida", "valor", "data_recebimento",
+            "nota_retorno", "data_retorno", "mao_de_obra", "valor_mao_de_obra"
+        ]
+        widgets = {
+            "cliente": forms.Select(attrs={"class": "form-select"}),
+            "codigo_peca": forms.TextInput(attrs={"class": "form-control"}),
+            "defeito": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "numero_lote": forms.TextInput(attrs={"class": "form-control"}),
+            "nota_recebida": forms.TextInput(attrs={"class": "form-control"}),
+            "valor": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
+            # Fundamental: especificar o format para preencher inputs type=date
+            "data_recebimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "form-control"}),
+            "nota_retorno": forms.TextInput(attrs={"class": "form-control"}),
+            "data_retorno": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+            "mao_de_obra": forms.CheckboxInput(attrs={"class": "form-check-input", "id": "id_mao_de_obra"}),
+            "valor_mao_de_obra": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "id": "id_valor_mao"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Aceita tanto ISO quanto pt-BR; e garante render correto do valor atual
+        self.fields["data_recebimento"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
+        # Quando o form é instanciado com 'instance', o Django já define initial,
+        # mas garantimos aqui por segurança para o widget type=date.
+        if self.instance and getattr(self.instance, "data_recebimento", None):
+            self.initial.setdefault("data_recebimento", self.instance.data_recebimento)
+
+    def clean_codigo_peca(self):
+        codigo = self.cleaned_data.get("codigo_peca", "").strip()
+        if not codigo:
+            return codigo
+        exists = Produto.objects.filter(codigo=codigo).exists()
+        if not exists:
+            # Permite manter o código já salvo em registros antigos
+            if getattr(self.instance, 'pk', None) and self.instance.codigo_peca == codigo:
+                return codigo
+            raise forms.ValidationError(
+                "Código de peça não encontrado entre os produtos cadastrados."
+            )
+        return codigo
+
+    def clean(self):
+        data = super().clean()
+        if data.get("mao_de_obra"):
+            if not data.get("valor_mao_de_obra"):
+                self.add_error("valor_mao_de_obra", "Informe o valor da mão de obra.")
+        else:
+            # Se não houver mão de obra, força valor 0 para evitar None
+            data["valor_mao_de_obra"] = data.get("valor_mao_de_obra") or 0
+        return data
+
+
+# Formulário de cabeçalho (para cadastro múltiplo)
+class GarantiaHeaderForm(forms.Form):
+    nota_recebida = forms.CharField(
+        label="Nota recebida",
+        required=True,
+        error_messages={"required": "Informe o número da nota recebida."},
+        widget=forms.TextInput(attrs={"class": "form-control"}),
+    )
+    cliente = forms.ModelChoiceField(
+        label="Cliente",
+        queryset=Cliente.objects.all(),
+        required=True,
+        error_messages={"required": "Selecione um cliente."},
+        widget=forms.Select(attrs={"class": "form-select", "id": "id_cliente"}),
+    )
+    data_recebimento = forms.DateField(
+        label="Data de recebimento",
+        required=True,
+        error_messages={"required": "Informe a data de recebimento."},
+        widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+    )
+
+
+class GarantiaItemForm(forms.Form):
+    codigo_peca = forms.ChoiceField(label="Código da peça", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
+    numero_lote = forms.CharField(label="Número do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    defeito = forms.CharField(label="Defeito", widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}))
+    valor = forms.DecimalField(label="Valor", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
+    nota_retorno = forms.CharField(label="Nota de retorno", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    data_retorno = forms.DateField(label="Data de retorno", required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
+    mao_de_obra = forms.BooleanField(label="Com mão de obra", required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
+    valor_mao_de_obra = forms.DecimalField(label="Valor mão de obra", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
+
+    def clean_codigo_peca(self):
+        codigo = self.cleaned_data.get("codigo_peca", "")
+        if not Produto.objects.filter(codigo=codigo).exists():
+            raise forms.ValidationError("Código de peça inválido.")
+        return codigo
+
+    def clean(self):
+        data = super().clean()
+        if data.get("mao_de_obra"):
+            if not data.get("valor_mao_de_obra"):
+                self.add_error("valor_mao_de_obra", "Informe o valor da mão de obra.")
+        else:
+            data["valor_mao_de_obra"] = data.get("valor_mao_de_obra") or 0
+        return data

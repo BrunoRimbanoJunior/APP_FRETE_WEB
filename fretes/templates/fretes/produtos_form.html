@@ -1,0 +1,64 @@
+{% extends "fretes/base.html" %}
+{% block title %}{% if is_new %}Novo{% else %}Editar{% endif %} Produto{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 800px;">
+  <h5 class="mb-3">{% if is_new %}Novo{% else %}Editar{% endif %} Produto</h5>
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.codigo.label }}</label>
+      <div class="col-sm-9">
+        {{ form.codigo }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.descricao.label }}</label>
+      <div class="col-sm-9">
+        {{ form.descricao }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.peso_bruto_kg.label }}</label>
+      <div class="col-sm-9">
+        {{ form.peso_bruto_kg }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.peso_liquido_kg.label }}</label>
+      <div class="col-sm-9">
+        {{ form.peso_liquido_kg }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.largura_cm.label }}</label>
+      <div class="col-sm-9">
+        {{ form.largura_cm }}
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.altura_cm.label }}</label>
+      <div class="col-sm-9">
+        {{ form.altura_cm }}
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <label class="col-sm-3 col-form-label">{{ form.comprimento_cm.label }}</label>
+      <div class="col-sm-9">
+        {{ form.comprimento_cm }}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary" type="submit">Salvar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'fretes:produto_list' %}">Voltar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

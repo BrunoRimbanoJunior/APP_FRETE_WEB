@@ -1,0 +1,272 @@
+{% extends "fretes/base.html" %}
+{% block title %}Nova Garantia{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 1000px;">
+  <h5 class="mb-3">Nova Garantia</h5>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if header_form.non_field_errors %}
+      <div class="alert alert-danger">{{ header_form.non_field_errors|join:", " }}</div>
+    {% endif %}
+
+    <!-- Cabeçalho da garantia (nota, cliente, data) -->
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ header_form.nota_recebida.label }}</label>
+      <div class="col-sm-9">
+        {{ header_form.nota_recebida }}
+        {% if header_form.nota_recebida.errors %}
+          <div class="text-danger small">{{ header_form.nota_recebida.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row mb-2">
+      <label class="col-sm-3 col-form-label">Buscar cliente</label>
+      <div class="col-sm-9 d-flex gap-2">
+        <input type="text" id="cliente-search" name="q" class="form-control" placeholder="CNPJ ou nome">
+        <button type="button"
+                class="btn btn-outline-secondary"
+                hx-get="{% url 'fretes:clientes_options' %}"
+                hx-target="#id_cliente"
+                hx-swap="innerHTML"
+                hx-include="#cliente-search,#id_cliente">Buscar</button>
+        <a class="btn btn-outline-primary" href="{% url 'fretes:cliente_create' %}" target="_blank">Cadastrar cliente</a>
+      </div>
+    </div>
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ header_form.cliente.label }}</label>
+      <div class="col-sm-9">
+        {{ header_form.cliente }}
+        {% if header_form.cliente.errors %}
+          <div class="text-danger small">{{ header_form.cliente.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <label class="col-sm-3 col-form-label">{{ header_form.data_recebimento.label }}</label>
+      <div class="col-sm-9">
+        {{ header_form.data_recebimento }}
+        {% if header_form.data_recebimento.errors %}
+          <div class="text-danger small">{{ header_form.data_recebimento.errors|join:", " }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Itens (produtos) -->
+    {{ formset.management_form }}
+    <div id="itens-container">
+      {% for f in formset.forms %}
+      {% if f.non_field_errors %}
+        <div class="alert alert-danger">{{ f.non_field_errors|join:", " }}</div>
+      {% endif %}
+      <div class="border rounded p-3 mb-3 item-bloco">
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">Buscar produto</label>
+          <div class="col-sm-9 d-flex gap-2">
+            <input type="text" class="form-control" id="produto-search-{{ forloop.counter0 }}" name="q" placeholder="Código ou descrição">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    hx-get="{% url 'fretes:produtos_options' %}"
+                    hx-target="#id_items-{{ forloop.counter0 }}-codigo_peca"
+                    hx-swap="innerHTML"
+                    hx-include="#produto-search-{{ forloop.counter0 }},#id_items-{{ forloop.counter0 }}-codigo_peca">Buscar</button>
+          </div>
+        </div>
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.codigo_peca.label }}</label>
+          <div class="col-sm-9">
+            {{ f.codigo_peca }}
+            {% if f.codigo_peca.errors %}
+              <div class="text-danger small">{{ f.codigo_peca.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.numero_lote.label }}</label>
+          <div class="col-sm-9">
+            {{ f.numero_lote }}
+            {% if f.numero_lote.errors %}
+              <div class="text-danger small">{{ f.numero_lote.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.defeito.label }}</label>
+          <div class="col-sm-9">
+            {{ f.defeito }}
+            {% if f.defeito.errors %}
+              <div class="text-danger small">{{ f.defeito.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.valor.label }}</label>
+          <div class="col-sm-9">
+            {{ f.valor }}
+            {% if f.valor.errors %}
+              <div class="text-danger small">{{ f.valor.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row mb-2 align-items-center">
+          <label class="col-sm-3 col-form-label">{{ f.mao_de_obra.label }}</label>
+          <div class="col-sm-9">
+            <div class="form-check">
+              {{ f.mao_de_obra }} <label class="form-check-label">Marcar se há mão de obra</label>
+            </div>
+          </div>
+        </div>
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.valor_mao_de_obra.label }}</label>
+          <div class="col-sm-9">
+            {{ f.valor_mao_de_obra }}
+            {% if f.valor_mao_de_obra.errors %}
+              <div class="text-danger small">{{ f.valor_mao_de_obra.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.nota_retorno.label }}</label>
+          <div class="col-sm-9">{{ f.nota_retorno }}</div>
+        </div>
+
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">{{ f.data_retorno.label }}</label>
+          <div class="col-sm-9">{{ f.data_retorno }}</div>
+        </div>
+
+        {% if f.DELETE %}
+        <div class="form-check">
+          <label class="form-check-label">{{ f.DELETE }} Remover este item</label>
+        </div>
+        {% endif %}
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="d-flex gap-2 mb-3">
+      <button type="button" class="btn btn-outline-secondary" id="add-item-btn">Adicionar produto</button>
+      <button type="submit" class="btn btn-primary">Salvar</button>
+      <a class="btn btn-outline-secondary" href="{% url 'fretes:garantia_list' %}">Voltar</a>
+    </div>
+  </form>
+
+  <!-- Template de item para JS -->
+  <template id="item-template">
+    <div class="border rounded p-3 mb-3 item-bloco">
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Buscar produto</label>
+        <div class="col-sm-9 d-flex gap-2">
+          <input type="text" class="form-control" id="produto-search-__i__" name="q" placeholder="Código ou descrição">
+          <button type="button"
+                  class="btn btn-outline-secondary"
+                  hx-get="{% url 'fretes:produtos_options' %}"
+                  hx-target="#id_items-__i__-codigo_peca"
+                  hx-swap="innerHTML"
+                  hx-include="#produto-search-__i__,#id_items-__i__-codigo_peca">Buscar</button>
+        </div>
+      </div>
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Código da peça</label>
+        <div class="col-sm-9">
+          <select name="items-__i__-codigo_peca" id="id_items-__i__-codigo_peca" class="form-select">
+            {% include 'fretes/_produto_options.html' with qs=produtos value='' %}
+          </select>
+        </div>
+      </div>
+
+      
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Número do lote</label>
+        <div class="col-sm-9"><input type="text" name="items-__i__-numero_lote" class="form-control"></div>
+      </div>
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Defeito</label>
+        <div class="col-sm-9"><textarea name="items-__i__-defeito" class="form-control" rows="2"></textarea></div>
+      </div>
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Valor</label>
+        <div class="col-sm-9"><input type="number" step="0.01" name="items-__i__-valor" class="form-control"></div>
+      </div>
+
+      <div class="row mb-2 align-items-center">
+        <label class="col-sm-3 col-form-label">Com mão de obra</label>
+        <div class="col-sm-9">
+          <div class="form-check">
+            <input type="checkbox" name="items-__i__-mao_de_obra" id="id_items-__i__-mao_de_obra" class="form-check-input">
+            <label class="form-check-label" for="id_items-__i__-mao_de_obra">Marcar se há mão de obra</label>
+          </div>
+        </div>
+      </div>
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Valor mão de obra</label>
+        <div class="col-sm-9"><input type="number" step="0.01" name="items-__i__-valor_mao_de_obra" id="id_items-__i__-valor_mao_de_obra" class="form-control" disabled></div>
+      </div>
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Nota de retorno</label>
+        <div class="col-sm-9"><input type="text" name="items-__i__-nota_retorno" class="form-control"></div>
+      </div>
+
+      <div class="row mb-2">
+        <label class="col-sm-3 col-form-label">Data de retorno</label>
+        <div class="col-sm-9"><input type="date" name="items-__i__-data_retorno" class="form-control"></div>
+      </div>
+
+    </div>
+    </template>
+
+    {% if formset.non_form_errors %}
+      <div class="alert alert-danger">{{ formset.non_form_errors|join:", " }}</div>
+    {% endif %}
+
+  <script>
+    (function(){
+      const addBtn = document.getElementById('add-item-btn');
+      if(!addBtn) return;
+      const container = document.getElementById('itens-container');
+      const template = document.getElementById('item-template');
+      const totalForms = document.getElementById('id_items-TOTAL_FORMS');
+
+      addBtn.addEventListener('click', function(){
+        const idx = parseInt(totalForms.value, 10);
+        let html = template.innerHTML.replaceAll('__i__', idx);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html.trim();
+        container.appendChild(wrapper.firstElementChild);
+        totalForms.value = idx + 1;
+        // toggle valor mão de obra para novo item
+        const cb = document.getElementById(`id_items-${idx}-mao_de_obra`);
+        const v = document.getElementById(`id_items-${idx}-valor_mao_de_obra`);
+        if (cb && v) {
+          v.disabled = !cb.checked;
+          cb.addEventListener('change', ()=>{ v.disabled = !cb.checked; });
+        }
+      });
+
+      // inicializa toggles existentes
+      document.querySelectorAll('input[id$="-mao_de_obra"]').forEach(function(cb){
+        const id = cb.id.replace('-mao_de_obra','-valor_mao_de_obra');
+        const v = document.getElementById(id);
+        if (v) { v.disabled = !cb.checked; cb.addEventListener('change', ()=>{ v.disabled = !cb.checked; }); }
+      });
+    })();
+  </script>
+
+</div>
+{% endblock %}

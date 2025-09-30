@@ -1,0 +1,8 @@
+{% for c in qs %}
+  {% if value and value|stringformat:'s' == c.id|stringformat:'s' %}
+    <option value="{{ c.id }}" selected>{{ c.nome }} ({{ c.cnpj }})</option>
+  {% else %}
+    <option value="{{ c.id }}">{{ c.nome }} ({{ c.cnpj }})</option>
+  {% endif %}
+{% endfor %}
+

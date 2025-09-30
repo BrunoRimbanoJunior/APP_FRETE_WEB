@@ -1,0 +1,24 @@
+{% extends "fretes/base.html" %}
+{% block title %}Importar Clientes{% endblock %}
+{% block content %}
+<div class="container" style="max-width: 720px;">
+  <h5 class="mb-3">Importar Clientes (Excel)</h5>
+  <div class="alert alert-info">
+    Estrutura esperada do arquivo (.xlsx), com cabeçalho na primeira linha:<br>
+    <code>NOME, CNPJ, ENDERECO, CIDADE, ESTADO, EMAIL, TELEFONE</code>
+    <br>
+    - <b>CNPJ</b> pode estar com ou sem máscara; será normalizado para dígitos.<br>
+    - <b>ESTADO</b> deve ser a UF com 2 letras (ex.: SP, PR).<br>
+    - <b>Atualização</b>: o cliente é localizado pelo CNPJ; se existir, os dados são atualizados; se não, é criado.
+  </div>
+  <div class="mb-3">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:admin_template_clientes' %}">Baixar template</a>
+  </div>
+  <form method="post" enctype="multipart/form-data" class="d-flex gap-2">
+    {% csrf_token %}
+    <input type="file" name="arquivo" accept=".xlsx,.xls" class="form-control" required>
+    <button class="btn btn-primary" type="submit">Importar</button>
+  </form>
+</div>
+{% endblock %}
+

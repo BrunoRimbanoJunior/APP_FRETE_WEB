@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Carrier, FreightTable, Pedido, PedidoVolume, FreteCalculado
+from .models import Carrier, FreightTable, Pedido, PedidoVolume, FreteCalculado, Produto, Cliente, Garantia
 
 class FreightTableInline(admin.StackedInline):
     model = FreightTable
@@ -28,3 +28,23 @@ class FreteCalculadoAdmin(admin.ModelAdmin):
     list_display = ("data_calculo", "numero_pedido", "carrier", "frete_total")
     list_filter = ("data_calculo", "carrier")
     search_fields = ("numero_pedido", "numero_nota")
+
+
+@admin.register(Produto)
+class ProdutoAdmin(admin.ModelAdmin):
+    list_display = ("codigo", "descricao", "peso_bruto_kg", "peso_liquido_kg")
+    search_fields = ("codigo", "descricao")
+
+
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
+    list_display = ("nome", "cnpj", "cidade", "estado", "email", "telefone")
+    search_fields = ("nome", "cnpj")
+    list_filter = ("estado",)
+
+
+@admin.register(Garantia)
+class GarantiaAdmin(admin.ModelAdmin):
+    list_display = ("id", "cliente", "codigo_peca", "nota_recebida", "nota_retorno", "data_recebimento", "data_retorno", "valor")
+    search_fields = ("codigo_peca", "nota_recebida", "nota_retorno", "cliente__nome", "cliente__cnpj")
+    list_filter = ("data_recebimento", "data_retorno")
