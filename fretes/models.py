@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.db import models
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
+from django.contrib.auth import get_user_model
+from django.db.models import JSONField
 
 class Carrier(models.Model):
     nome = models.CharField("Nome", max_length=120, unique=True)
@@ -105,6 +107,12 @@ class Produto(models.Model):
         ordering = ["codigo"]
         verbose_name = "Produto"
         verbose_name_plural = "Produtos"
+        permissions = (
+            ("can_import_products", "Pode importar produtos"),
+            ("can_import_clients", "Pode importar clientes"),
+            ("can_view_reports", "Pode acessar relatórios"),
+            ("can_use_calcular", "Pode usar a ferramenta Calcular"),
+        )
 
     def __str__(self) -> str:
         return f"{self.codigo} - {self.descricao}"
@@ -155,3 +163,110 @@ class Garantia(models.Model):
     @property
     def status(self) -> str:
         return self.STATUS_ATENDIDO if self.nota_retorno else self.STATUS_EM_ABERTO
+
+
+# Auditoria
+class AuditLog(models.Model):
+    ACTIONS = (
+        ("create", "create"),
+        ("update", "update"),
+        ("delete", "delete"),
+        ("import", "import"),
+        ("export", "export"),
+        ("login", "login"),
+        ("logout", "logout"),
+        ("view", "view"),
+    )
+    user = models.ForeignKey(get_user_model(), null=True, blank=True, on_delete=models.SET_NULL)
+    username = models.CharField(max_length=150, blank=True)
+    action = models.CharField(max_length=16, choices=ACTIONS)
+    module = models.CharField(max_length=50, blank=True)
+    object_type = models.CharField(max_length=50, blank=True)
+    object_id = models.CharField(max_length=64, blank=True)
+    object_repr = models.CharField(max_length=255, blank=True)
+    path = models.CharField(max_length=255, blank=True)
+    method = models.CharField(max_length=8, blank=True)
+    status_code = models.PositiveIntegerField(default=0)
+    ip = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    changes = JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        verbose_name = "Log de Auditoria"
+        verbose_name_plural = "Logs de Auditoria"
+
+    def __str__(self) -> str:
+        return f"{self.created_at} {self.username} {self.action} {self.object_type}#{self.object_id}"
+
+
+def _capture_original(instance):
+    data = {}
+    for f in instance._meta.fields:
+        if f.name in ("id",):
+            continue
+        try:
+            data[f.name] = getattr(instance, f.name)
+        except Exception:
+            pass
+    instance._original_state = data
+
+
+def _log_model_action(instance, action):
+    from django.contrib.auth.models import AnonymousUser
+    try:
+        changes = None
+        if action == "update" and hasattr(instance, "_original_state"):
+            changes = {}
+            for k, old in instance._original_state.items():
+                new = getattr(instance, k, None)
+                if old != new:
+                    changes[k] = [old, new]
+            if not changes:
+                changes = None
+    except Exception:
+        changes = None
+    AuditLog.objects.create(
+        user=None,
+        username="",
+        action=action,
+        module="model",
+        object_type=instance.__class__.__name__,
+        object_id=str(getattr(instance, "pk", "")),
+        object_repr=str(instance)[:255],
+        changes=changes,
+    )
+
+
+@receiver(pre_save, sender=Produto)
+@receiver(pre_save, sender=Cliente)
+@receiver(pre_save, sender=Garantia)
+@receiver(pre_save, sender=Pedido)
+@receiver(pre_save, sender=PedidoVolume)
+def _pre_save_capture(sender, instance, **kwargs):
+    if getattr(instance, "pk", None):
+        try:
+            original = sender.objects.get(pk=instance.pk)
+            _capture_original(original)
+            instance._original_state = getattr(original, "_original_state", {})
+        except sender.DoesNotExist:
+            instance._original_state = {}
+
+
+@receiver(post_save, sender=Produto)
+@receiver(post_save, sender=Cliente)
+@receiver(post_save, sender=Garantia)
+@receiver(post_save, sender=Pedido)
+@receiver(post_save, sender=PedidoVolume)
+def _post_save_log(sender, instance, created, **kwargs):
+    _log_model_action(instance, "create" if created else "update")
+
+
+@receiver(post_delete, sender=Produto)
+@receiver(post_delete, sender=Cliente)
+@receiver(post_delete, sender=Garantia)
+@receiver(post_delete, sender=Pedido)
+@receiver(post_delete, sender=PedidoVolume)
+def _post_delete_log(sender, instance, **kwargs):
+    _log_model_action(instance, "delete")

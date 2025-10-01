@@ -43,6 +43,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "fretes.middleware.LoginRequiredForAppMiddleware",
+    "fretes.middleware.AuditMiddleware",
 ]
 
 ROOT_URLCONF = "fretes_web.urls"

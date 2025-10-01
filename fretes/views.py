@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.forms import inlineformset_factory, formset_factory
 from django import forms as djforms
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.decorators import permission_required, login_required
 from django.db import transaction
 from openpyxl import load_workbook
 from django.utils import timezone
@@ -13,7 +14,29 @@ from .forms import CalcularFreteForm, PedidoForm, PedidoVolumeForm, ProdutoForm,
 from .filters import FreteCalculadoFilter
 from .services import calcular_frete
 from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf
+from django.contrib.auth import get_user_model
+from .models import AuditLog
+from django.utils.dateparse import parse_date
 
+def _last_non_empty_param(request, *keys, suffixes=()):
+    querydict = request.GET
+    for key in keys:
+        values = querydict.getlist(key)
+        if not values:
+            continue
+        for value in reversed(values):
+            if value and value.strip():
+                return value.strip()
+    for suffix in suffixes:
+        matching_keys = [k for k in querydict.keys() if k.endswith(suffix)]
+        for key in reversed(matching_keys):
+            values = querydict.getlist(key)
+            if not values:
+                continue
+            for value in reversed(values):
+                if value and value.strip():
+                    return value.strip()
+    return ""
 
 VolumeFormSet = inlineformset_factory(
     Pedido, PedidoVolume,
@@ -101,6 +124,7 @@ def pedido_create(request):
 
 # fretes/views.py
 
+@permission_required('fretes.can_use_calcular', raise_exception=True)
 def calcular_view(request):
     context = {}
     if request.method == "POST":
@@ -208,6 +232,7 @@ def pedido_update(request, pk: int):
                   {"form": form, "formset": formset, "pedido": pedido, "is_new": False})
 
 
+@permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_view(request):
     f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").all())
     export = request.GET.get("export")
@@ -217,6 +242,7 @@ def relatorios_view(request):
         return exportar_fretes_pdf(f.qs)
     return render(request, "fretes/relatorios.html", {"filter": f})
 
+@permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_pdf_view(request):
     f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").all())
     return exportar_fretes_pdf(f.qs)
@@ -239,6 +265,7 @@ def produto_list(request):
     return render(request, "fretes/produtos_list.html", {"produtos": qs, "codigo": codigo})
 
 
+@permission_required('fretes.add_produto', raise_exception=True)
 def produto_create(request):
     if request.method == "POST":
         form = ProdutoForm(request.POST)
@@ -251,6 +278,7 @@ def produto_create(request):
     return render(request, "fretes/produtos_form.html", {"form": form, "is_new": True})
 
 
+@permission_required('fretes.change_produto', raise_exception=True)
 def produto_update(request, pk: int):
     produto = get_object_or_404(Produto, pk=pk)
     if request.method == "POST":
@@ -295,6 +323,7 @@ def cliente_list(request):
     return render(request, "fretes/clientes_list.html", {"clientes": qs, "cnpj": cnpj, "nome": nome})
 
 
+@permission_required('fretes.add_cliente', raise_exception=True)
 def cliente_create(request):
     if request.method == "POST":
         form = ClienteForm(request.POST)
@@ -307,6 +336,7 @@ def cliente_create(request):
     return render(request, "fretes/clientes_form.html", {"form": form, "is_new": True})
 
 
+@permission_required('fretes.change_cliente', raise_exception=True)
 def cliente_update(request, pk: int):
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == "POST":
@@ -321,6 +351,7 @@ def cliente_update(request, pk: int):
 
 
 # Garantias
+@permission_required('fretes.view_garantia', raise_exception=True)
 def garantia_list(request):
     nota = request.GET.get("nota", "").strip()
     cnpj = request.GET.get("cnpj", "").strip()
@@ -394,21 +425,23 @@ def garantia_update(request, pk: int):
 
 
 def produtos_options(request):
-    q = (request.GET.get("q") or request.GET.get("codigo") or request.GET.get("codigo_peca") or "").strip()
+    q = _last_non_empty_param(request, "q", "codigo", "codigo_peca")
     qs = Produto.objects.all().order_by("codigo")
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descricao__icontains=q))
-    return render(request, "fretes/_produto_options.html", {"qs": qs, "value": request.GET.get("codigo_peca", "")})
-
+    value = _last_non_empty_param(request, "codigo_peca", suffixes=("-codigo_peca",))
+    return render(request, "fretes/_produto_options.html", {"qs": qs, "value": value})
 
 def clientes_options(request):
-    q = (request.GET.get("q") or request.GET.get("cnpj") or request.GET.get("nome") or "").strip()
+    q = _last_non_empty_param(request, "q", "cnpj", "nome")
     qs = Cliente.objects.all().order_by("nome")
     if q:
         qs = qs.filter(Q(cnpj__icontains=q) | Q(nome__icontains=q))
-    return render(request, "fretes/_cliente_options.html", {"qs": qs, "value": request.GET.get("cliente", "")})
+    value = request.GET.get("cliente", "")
+    return render(request, "fretes/_cliente_options.html", {"qs": qs, "value": value})
 
 
+@permission_required('fretes.add_garantia', raise_exception=True)
 def garantia_create_multi(request):
     ItemFormSet = formset_factory(GarantiaItemForm, extra=1, can_delete=True)
     produtos_qs = Produto.objects.all().order_by("codigo")
@@ -459,7 +492,7 @@ def garantia_create_multi(request):
 
 
 # ---------------- Ferramentas administrativas ----------------
-@staff_member_required
+@permission_required('fretes.can_import_products', raise_exception=True)
 def admin_import_produtos(request):
     context = {}
     if request.method == "POST" and request.FILES.get("arquivo"):
@@ -583,7 +616,7 @@ def admin_import_produtos(request):
     return render(request, "fretes/import_produtos.html", context)
 
 
-@staff_member_required
+@permission_required('fretes.can_import_clients', raise_exception=True)
 def admin_import_clientes(request):
     context = {}
     if request.method == "POST" and request.FILES.get("arquivo"):
@@ -673,3 +706,41 @@ def admin_template_clientes(request):
     )
     resp["Content-Disposition"] = 'attachment; filename="template_clientes.xlsx"'
     return resp
+
+
+@permission_required('fretes.view_auditlog', raise_exception=True)
+def audit_log_view(request):
+    User = get_user_model()
+    users = User.objects.order_by('username')
+    qs = AuditLog.objects.select_related('user').all().order_by('-created_at', '-id')
+    user_id = request.GET.get('user')
+    action = request.GET.get('action', '').strip()
+    module = request.GET.get('module', '').strip()
+    start_date = request.GET.get('start_date', '').strip()
+    end_date = request.GET.get('end_date', '').strip()
+    q = request.GET.get('q', '').strip()
+
+    if user_id:
+        qs = qs.filter(user_id=user_id)
+    if action:
+        qs = qs.filter(action=action)
+    if module:
+        qs = qs.filter(module=module)
+    if start_date:
+        qs = qs.filter(created_at__date__gte=parse_date(start_date))
+    if end_date:
+        qs = qs.filter(created_at__date__lte=parse_date(end_date))
+    if q:
+        qs = qs.filter(object_repr__icontains=q) | qs.filter(path__icontains=q) | qs.filter(username__icontains=q)
+
+    return render(request, 'fretes/auditoria.html', {
+        'logs': qs[:500],
+        'users': users,
+        'user_id': user_id or '',
+        'action': action,
+        'module': module,
+        'start_date': start_date,
+        'end_date': end_date,
+        'q': q,
+    })
+

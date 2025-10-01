@@ -36,4 +36,5 @@ urlpatterns = [
     path("admin/tools/importar-produtos/", views.admin_import_produtos, name="admin_import_produtos"),
     path("admin/tools/importar-clientes/", views.admin_import_clientes, name="admin_import_clientes"),
     path("admin/tools/template-clientes/", views.admin_template_clientes, name="admin_template_clientes"),
+    path("admin/tools/logs/", views.audit_log_view, name="audit_logs"),
 ]
