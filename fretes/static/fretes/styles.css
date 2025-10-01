@@ -161,3 +161,9 @@ hr {
         margin-left: 0;
     }
 }
+.btn-relatorio {
+    background-color: #17a2b8;
+    color: white;
+    text-decoration: none;
+}
+

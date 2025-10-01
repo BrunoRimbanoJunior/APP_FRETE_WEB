@@ -1,4 +1,5 @@
 
+from decimal import Decimal
 from io import BytesIO
 from django.http import HttpResponse
 from openpyxl import Workbook
@@ -6,6 +7,118 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+
+def _pedido_volume_stats(pedido):
+    rows = []
+    total_volumes = 0
+    total_m3 = Decimal("0")
+    for volume in pedido.volumes.all().order_by("id"):
+        rows.append((volume.largura_cm, volume.altura_cm, volume.comprimento_cm, volume.quantidade))
+        largura_m = volume.largura_cm / Decimal("100")
+        altura_m = volume.altura_cm / Decimal("100")
+        comprimento_m = volume.comprimento_cm / Decimal("100")
+        total_m3 += (largura_m * altura_m * comprimento_m) * Decimal(volume.quantidade)
+        total_volumes += volume.quantidade
+    return rows, total_volumes, total_m3.quantize(Decimal("0.001"))
+
+
+def exportar_pedido_excel(pedido):
+    rows, total_volumes, total_m3 = _pedido_volume_stats(pedido)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Pedido"
+
+    carrier_name = str(pedido.carrier) if pedido.carrier else ""
+    ws.append(["Numero do pedido", pedido.numero_pedido])
+    ws.append(["Picking", pedido.picking or ""])
+    ws.append(["Transportadora", carrier_name])
+    ws.append([])
+
+    ws.append(["Largura (cm)", "Altura (cm)", "Comprimento (cm)", "Quantidade"])
+    if rows:
+        for largura, altura, comprimento, quantidade in rows:
+            ws.append([float(largura), float(altura), float(comprimento), quantidade])
+    else:
+        ws.append(["-", "-", "-", "-"])
+
+    ws.append([])
+    ws.append(["Total de volumes", total_volumes])
+    ws.append(["Cubagem total (m3)", float(total_m3)])
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    resp = HttpResponse(
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = f'attachment; filename="pedido_{pedido.id}.xlsx"'
+    return resp
+
+def exportar_pedido_pdf(pedido):
+    rows, total_volumes, total_m3 = _pedido_volume_stats(pedido)
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+
+    styles = getSampleStyleSheet()
+    story = [Paragraph("Relatorio de Pedido", styles["Title"]), Spacer(1, 10)]
+
+    carrier_name = str(pedido.carrier) if pedido.carrier else ""
+    info_table = Table([
+        ["Numero do pedido", pedido.numero_pedido],
+        ["Picking", pedido.picking or ""],
+        ["Transportadora", carrier_name],
+    ], colWidths=[150, 350])
+    info_table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "Helvetica"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.extend([info_table, Spacer(1, 12)])
+
+    volume_headers = ["Largura (cm)", "Altura (cm)", "Comprimento (cm)", "Quantidade"]
+    volume_rows = [volume_headers]
+    if rows:
+        for largura, altura, comprimento, quantidade in rows:
+            volume_rows.append([
+                f"{largura:.2f}",
+                f"{altura:.2f}",
+                f"{comprimento:.2f}",
+                str(quantidade),
+            ])
+    else:
+        volume_rows.append(["-", "-", "-", "-"])
+
+    volumes_table = Table(volume_rows, repeatRows=1)
+    volumes_table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+        ("GRID", (0,0), (-1,-1), 0.3, colors.grey),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("FONTSIZE", (0,0), (-1,-1), 9),
+        ("ALIGN", (0,1), (-2,-1), "RIGHT"),
+        ("ALIGN", (-1,1), (-1,-1), "CENTER"),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.white]),
+    ]))
+    story.extend([volumes_table, Spacer(1, 10)])
+
+    summary_table = Table([
+        ["Total de volumes", str(total_volumes)],
+        ["Cubagem total (m3)", f"{total_m3:.3f}"],
+    ], colWidths=[200, 150])
+    summary_table.setStyle(TableStyle([
+        ("FONTNAME", (0,0), (-1,-1), "Helvetica-Bold"),
+        ("FONTSIZE", (0,0), (-1,-1), 10),
+        ("ALIGN", (0,0), (-1,-1), "LEFT"),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 6),
+    ]))
+    story.append(summary_table)
+
+    doc.build(story)
+    pdf = buf.getvalue()
+    buf.close()
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="pedido_{pedido.id}.pdf"'
+    return resp
 
 def _rows_from_queryset(queryset):
     rows = []

@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import Http404
 from django.forms import inlineformset_factory, formset_factory
 from django import forms as djforms
 from django.contrib.admin.views.decorators import staff_member_required
@@ -13,7 +14,7 @@ from .models import Pedido, PedidoVolume, Carrier, FreteCalculado, Produto, Clie
 from .forms import CalcularFreteForm, PedidoForm, PedidoVolumeForm, ProdutoForm, ClienteForm, GarantiaForm, GarantiaHeaderForm, GarantiaItemForm
 from .filters import FreteCalculadoFilter
 from .services import calcular_frete
-from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf
+from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf, exportar_pedido_excel, exportar_pedido_pdf
 from django.contrib.auth import get_user_model
 from .models import AuditLog
 from django.utils.dateparse import parse_date
@@ -58,7 +59,7 @@ VolumeFormSet = inlineformset_factory(
 
 def _calcular_m3_total_pedido(pedido):
     """
-    Função auxiliar para somar a cubagem de todos os volumes de um pedido,
+    Funcao auxiliar para somar a cubagem de todos os volumes de um pedido,
     considerando a quantidade.
     """
     total_m3 = Decimal("0")
@@ -66,11 +67,37 @@ def _calcular_m3_total_pedido(pedido):
         largura = volume.largura_cm / Decimal("100")
         altura = volume.altura_cm / Decimal("100")
         comprimento = volume.comprimento_cm / Decimal("100")
-        
-        # 💡 Multiplica o volume pela quantidade antes de somar
+
+        # Nota: multiplica o volume pela quantidade antes de somar
         m3_volume = (largura * altura * comprimento) * Decimal(volume.quantidade)
         total_m3 += m3_volume
     return total_m3.quantize(Decimal("0.001"))
+
+
+def _total_volumes_from_formset(formset):
+    total = 0
+    for form in getattr(formset, "forms", []):
+        prefix = form.prefix
+        if form.is_bound:
+            delete_value = form.data.get(f"{prefix}-DELETE")
+        else:
+            initial = getattr(form, "initial", None) or {}
+            delete_value = initial.get("DELETE")
+        if delete_value is True or (isinstance(delete_value, str) and delete_value.lower() in {"1", "true", "on", "yes"}):
+            continue
+        qty_raw = None
+        if form.is_bound:
+            qty_raw = form.data.get(f"{prefix}-quantidade")
+        if qty_raw in (None, ""):
+            initial = getattr(form, "initial", None) or {}
+            qty_raw = initial.get("quantidade")
+        if qty_raw in (None, "") and getattr(form, "instance", None) is not None:
+            qty_raw = getattr(form.instance, "quantidade", None)
+        try:
+            total += int(qty_raw)
+        except (TypeError, ValueError):
+            continue
+    return total
 
 
 def pedido_create(request):
@@ -90,15 +117,15 @@ def pedido_create(request):
                 pedido.picking = form.cleaned_data.get("picking")
                 pedido.carrier = form.cleaned_data.get("carrier")
                 pedido.save(update_fields=["picking", "carrier"])
-            
-            # 💡 Removemos a linha 'pedido.volumes.all().delete()'
+
+            # Nota: removemos a linha 'pedido.volumes.all().delete()'
             #    que estava causando o problema.
-            
-            # Associa a instância do pedido ao formset e salva
+
+            # Associa a instancia do pedido ao formset e salva
             formset.instance = pedido
             formset.save()
 
-            # Atualiza m3 total do pedido após salvar volumes
+            # Atualiza m3 total do pedido apos salvar volumes
             try:
                 pedido.refresh_from_db()
                 pedido.m3 = _calcular_m3_total_pedido(pedido)
@@ -109,7 +136,7 @@ def pedido_create(request):
             messages.success(request, "Pedido salvo com sucesso.")
             return redirect("fretes:pedido_list")
         else:
-            # Lógica de erro para formulário
+            # Logica de erro para formulario
             for err in formset.non_form_errors():
                 messages.error(request, err)
             for f in formset.forms:
@@ -118,10 +145,13 @@ def pedido_create(request):
     else:
         form = PedidoForm()
         formset = VolumeFormSet(prefix="vol")
-    
-    return render(request, "fretes/pedidos_form.html",
-                  {"form": form, "formset": formset, "is_new": True})
 
+    total_volumes = _total_volumes_from_formset(formset)
+    return render(
+        request,
+        "fretes/pedidos_form.html",
+        {"form": form, "formset": formset, "is_new": True, "total_volumes": total_volumes},
+    )
 # fretes/views.py
 
 @permission_required('fretes.can_use_calcular', raise_exception=True)
@@ -213,7 +243,7 @@ def pedido_update(request, pk: int):
         if form.is_valid() and formset.is_valid():
             form.save()
             formset.save()
-            # Recalcula m3 após atualização
+            # Recalcula m3 apos atualizacao
             pedido.refresh_from_db()
             pedido.m3 = _calcular_m3_total_pedido(pedido)
             pedido.save(update_fields=["m3"])
@@ -228,9 +258,30 @@ def pedido_update(request, pk: int):
     else:
         form = PedidoForm(instance=pedido)
         formset = VolumeFormSet(instance=pedido, prefix="vol")  # << prefix
-    return render(request, "fretes/pedidos_form.html",
-                  {"form": form, "formset": formset, "pedido": pedido, "is_new": False})
 
+    total_volumes = _total_volumes_from_formset(formset)
+    return render(
+        request,
+        "fretes/pedidos_form.html",
+        {
+            "form": form,
+            "formset": formset,
+            "pedido": pedido,
+            "is_new": False,
+            "total_volumes": total_volumes,
+        },
+    )
+
+@permission_required('fretes.view_pedido', raise_exception=True)
+def pedido_relatorio(request, pk: int):
+    formato = (request.GET.get("format") or "pdf").lower()
+    queryset = Pedido.objects.select_related("carrier").prefetch_related("volumes")
+    pedido = get_object_or_404(queryset, pk=pk)
+    if formato == "xlsx":
+        return exportar_pedido_excel(pedido)
+    if formato == "pdf":
+        return exportar_pedido_pdf(pedido)
+    raise Http404("Formato nao suportado")
 
 @permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_view(request):

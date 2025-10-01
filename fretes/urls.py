@@ -9,6 +9,7 @@ urlpatterns = [
     path("pedidos/", views.pedido_list, name="pedido_list"),
     path("pedidos/novo/", views.pedido_create, name="pedido_create"),
     path("pedidos/<int:pk>/editar/", views.pedido_update, name="pedido_update"),
+    path("pedidos/<int:pk>/relatorio/", views.pedido_relatorio, name="pedido_relatorio"),
     # 🔎 Auto-complete de pedidos
     path("pedidos/autocomplete/", views.pedidos_autocomplete, name="pedidos_autocomplete"),
     # Calcular
@@ -38,3 +39,4 @@ urlpatterns = [
     path("admin/tools/template-clientes/", views.admin_template_clientes, name="admin_template_clientes"),
     path("admin/tools/logs/", views.audit_log_view, name="audit_logs"),
 ]
+

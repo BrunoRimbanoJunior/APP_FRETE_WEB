@@ -4,14 +4,12 @@
 <head>
     <meta charset="utf-8">
     <title>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</title>
-
+    <link rel="stylesheet" href="{% static 'fretes/styles.css' %}">
 </head>
-{% load static %}
-<link rel="stylesheet" href="{% static 'fretes/styles.css' %}">
 <body>
 <div class="container">
     <h1>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</h1>
-    
+
     <form method="post" novalidate>
         {% csrf_token %}
         <div class="form-row">
@@ -28,6 +26,13 @@
                 {{ form.carrier }}
             </div>
         </div>
+        <div class="form-row">
+            <div class="form-col form-group">
+                <label>Total de volumes</label>
+                <input type="number" id="total-volumes-display" value="{{ total_volumes|default:0 }}" readonly>
+            </div>
+        </div>
+
         <hr>
         <h3>Volumes</h3>
         {{ formset.management_form }}
@@ -35,7 +40,7 @@
             {% for f in formset.forms %}
                 <div class="volume-container">
                     <div class="volume-header">
-                        <h4>Volume {{ forloop.counter }}</h4>
+                        <div></div>
                         {% if f.DELETE %}
                             <label class="delete-checkbox-label">
                                 {{ f.DELETE }} Remover
@@ -59,10 +64,6 @@
                             <label>Quantidade</label>
                             {{ f.quantidade }}
                         </div>
-                        <div class="volume-field">
-                            <label>Volumes</label>
-                            <input type="text" class="volume-total" value="" disabled>
-                        </div>
                     </div>
                     {{ f.id }}
                 </div>
@@ -70,96 +71,101 @@
         </div>
         <div class="button-container">
             <button type="button" id="add-volume-btn" class="btn btn-adicionar">Adicionar Volume</button>
-            <button type="submit" class="btn btn-salvar">Salvar Pedido</button>    
+            <button type="submit" class="btn btn-salvar">Salvar Pedido</button>
+            {% if pedido %}
+                <a href="{% url 'fretes:pedido_relatorio' pedido.id %}?format=pdf" class="btn btn-relatorio">Relatorio PDF</a>
+                <a href="{% url 'fretes:pedido_relatorio' pedido.id %}?format=xlsx" class="btn btn-relatorio">Relatorio Excel</a>
+            {% endif %}
             <a href="{% url 'fretes:pedido_list' %}" class="btn btn-voltar">Voltar para Lista</a>
         </div>
-
     </form>
-    
-    </div>
-</body>
-</html>
-    </form>
-    
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        let managementForm = document.querySelector('#id_vol-TOTAL_FORMS');
-        let addButton = document.querySelector('#add-volume-btn');
-        let volumesContainer = document.querySelector('#volumes-container');
-        
-        // Template para um novo volume
-        let newVolumeTemplate = `
-            <div class="volume-container">
-                <div class="volume-header">
-                    <h4>Volume </h4>
-                    <label class="delete-checkbox-label">
-                        <input type="checkbox" name="vol-__prefix__-DELETE" id="id_vol-__prefix__-DELETE"> Remover
-                    </label>
-                </div>
-                <div class="volume-fields">
-                    <div class="volume-field">
-                        <label>Largura (cm)</label>
-                        <input type="number" name="vol-__prefix__-largura_cm" id="id_vol-__prefix__-largura_cm" required>
-                    </div>
-                    <div class="volume-field">
-                        <label>Altura (cm)</label>
-                        <input type="number" name="vol-__prefix__-altura_cm" id="id_vol-__prefix__-altura_cm" required>
-                    </div>
-                    <div class="volume-field">
-                        <label>Comprimento (cm)</label>
-                        <input type="number" name="vol-__prefix__-comprimento_cm" id="id_vol-__prefix__-comprimento_cm" required>
-                    </div>
-                    <div class="volume-field">
-                        <label>Quantidade</label>
-                        <input type="number" name="vol-__prefix__-quantidade" id="id_vol-__prefix__-quantidade" required value="1">
-                    </div>
-                        <div class="volume-field">
-                            <label>Volumes</label>
-                            <input type="text" class="volume-total" value="" disabled>
-                        </div>
-                </div>
-                <input type="hidden" name="vol-__prefix__-id" id="id_vol-__prefix__-id">
-            </div>
-        `;
+</div>
 
-        function recalcVolumesTotal() {
-            const qtyInputs = document.querySelectorAll("input[name^='vol-'][name$='-quantidade']");
-            let total = 0;
-            qtyInputs.forEach(inp => {
-                const v = parseInt(inp.value || '0', 10);
-                if (!isNaN(v)) total += v;
-            });
-            document.querySelectorAll('.volume-total').forEach(el => { el.value = total; });
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const managementForm = document.querySelector('#id_vol-TOTAL_FORMS');
+    const addButton = document.querySelector('#add-volume-btn');
+    const volumesContainer = document.querySelector('#volumes-container');
+    const totalField = document.getElementById('total-volumes-display');
+
+    const newVolumeTemplate = `
+      <div class="volume-container">
+        <div class="volume-header">
+          <div></div>
+          <label class="delete-checkbox-label">
+            <input type="checkbox" name="vol-__prefix__-DELETE" id="id_vol-__prefix__-DELETE"> Remover
+          </label>
+        </div>
+        <div class="volume-fields">
+          <div class="volume-field">
+            <label>Largura (cm)</label>
+            <input type="number" name="vol-__prefix__-largura_cm" id="id_vol-__prefix__-largura_cm" required>
+          </div>
+          <div class="volume-field">
+            <label>Altura (cm)</label>
+            <input type="number" name="vol-__prefix__-altura_cm" id="id_vol-__prefix__-altura_cm" required>
+          </div>
+          <div class="volume-field">
+            <label>Comprimento (cm)</label>
+            <input type="number" name="vol-__prefix__-comprimento_cm" id="id_vol-__prefix__-comprimento_cm" required>
+          </div>
+          <div class="volume-field">
+            <label>Quantidade</label>
+            <input type="number" name="vol-__prefix__-quantidade" id="id_vol-__prefix__-quantidade" required value="1">
+          </div>
+        </div>
+        <input type="hidden" name="vol-__prefix__-id" id="id_vol-__prefix__-id">
+      </div>
+    `;
+
+    function attachListeners(container) {
+      const qtyInput = container.querySelector("input[name$='-quantidade']");
+      if (qtyInput) {
+        qtyInput.addEventListener('input', recalcVolumesTotal);
+      }
+      const deleteInput = container.querySelector("input[name$='-DELETE']");
+      if (deleteInput) {
+        deleteInput.addEventListener('change', recalcVolumesTotal);
+      }
+    }
+
+    function recalcVolumesTotal() {
+      let total = 0;
+      document.querySelectorAll('#volumes-container .volume-container').forEach(container => {
+        const deleteInput = container.querySelector("input[name$='-DELETE']");
+        if (deleteInput && deleteInput.checked) {
+          return;
         }
+        const qtyInput = container.querySelector("input[name$='-quantidade']");
+        if (!qtyInput) {
+          return;
+        }
+        const value = parseInt(qtyInput.value || '0', 10);
+        if (!isNaN(value)) {
+          total += value;
+        }
+      });
+      if (totalField) {
+        totalField.value = total;
+      }
+    }
 
-        // Recalcula ao adicionar linhas
-        addButton.addEventListener('click', function() {
-            let formCount = parseInt(managementForm.value);
-            let newFormHtml = newVolumeTemplate.replace(/__prefix__/g, formCount);
-            
-            volumesContainer.insertAdjacentHTML('beforeend', newFormHtml);
-            
-            let newForm = volumesContainer.lastElementChild;
-            newForm.querySelector('h4').textContent = `Volume ${formCount + 1}`;
-            
-            managementForm.value = formCount + 1;
-
-            // Ouvir alterações de quantidade na nova linha
-            const qtyInput = newForm.querySelector(`input[name='vol-${formCount}-quantidade']`);
-            if (qtyInput) {
-                qtyInput.addEventListener('input', recalcVolumesTotal);
-            }
-            recalcVolumesTotal();
-        });
-
-        // Listeners iniciais para quantidades existentes
-        document.querySelectorAll("input[name^='vol-'][name$='-quantidade']").forEach(inp => {
-            inp.addEventListener('input', recalcVolumesTotal);
-        });
-        // Primeira atualização na carga
+    if (addButton && managementForm && volumesContainer) {
+      addButton.addEventListener('click', function() {
+        const formCount = parseInt(managementForm.value || '0', 10);
+        const newFormHtml = newVolumeTemplate.replace(/__prefix__/g, formCount);
+        volumesContainer.insertAdjacentHTML('beforeend', newFormHtml);
+        managementForm.value = formCount + 1;
+        const newContainer = volumesContainer.lastElementChild;
+        attachListeners(newContainer);
         recalcVolumesTotal();
       });
-    </script>
-</div>
+    }
+
+    document.querySelectorAll('#volumes-container .volume-container').forEach(attachListeners);
+
+    recalcVolumesTotal();
+  });
+</script>
 </body>
 </html>

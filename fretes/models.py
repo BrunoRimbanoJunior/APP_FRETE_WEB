@@ -1,5 +1,6 @@
 
 from decimal import Decimal
+from datetime import date, datetime
 from django.db import models
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
@@ -201,13 +202,20 @@ class AuditLog(models.Model):
         return f"{self.created_at} {self.username} {self.action} {self.object_type}#{self.object_id}"
 
 
+def _serialize_change_value(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value
+
 def _capture_original(instance):
     data = {}
     for f in instance._meta.fields:
         if f.name in ("id",):
             continue
         try:
-            data[f.name] = getattr(instance, f.name)
+            data[f.name] = _serialize_change_value(getattr(instance, f.name))
         except Exception:
             pass
     instance._original_state = data
@@ -222,7 +230,7 @@ def _log_model_action(instance, action):
             for k, old in instance._original_state.items():
                 new = getattr(instance, k, None)
                 if old != new:
-                    changes[k] = [old, new]
+                    changes[k] = [_serialize_change_value(old), _serialize_change_value(new)]
             if not changes:
                 changes = None
     except Exception:
@@ -270,3 +278,9 @@ def _post_save_log(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=PedidoVolume)
 def _post_delete_log(sender, instance, **kwargs):
     _log_model_action(instance, "delete")
+
+
+
+
+
+
