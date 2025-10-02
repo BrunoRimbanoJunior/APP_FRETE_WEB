@@ -1,6 +1,13 @@
 from django.contrib import admin
 from .models import Carrier, FreightTable, Pedido, PedidoVolume, FreteCalculado, Produto, Cliente, Garantia, AuditLog
 
+
+admin.site.site_header = "Configurações App Frete"
+admin.site.site_title = "Configurações App Frete"
+admin.site.index_title = "Bem-vindo"
+
+
+
 class FreightTableInline(admin.StackedInline):
     model = FreightTable
     extra = 0

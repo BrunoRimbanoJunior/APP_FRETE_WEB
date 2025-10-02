@@ -1,4 +1,4 @@
-{% extends "fretes/base.html" %}
+ï»¿{% extends "fretes/base.html" %}
 {% block title %}{% if is_new %}Nova{% else %}Editar{% endif %} Garantia{% endblock %}
 {% block content %}
 <div class="container" style="max-width: 800px;">
@@ -44,7 +44,7 @@
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar produto</label>
       <div class="col-sm-9 d-flex gap-2">
-        <input type="text" id="produto-searCódigo ou descrição">
+        <input type="text" id="produto-searCï¿½digo ou descriï¿½ï¿½o">
         <button type="button"
                 class="btn btn-outline-secondary"
                 hx-get="{% url 'fretes:produtos_options' %}"
@@ -67,6 +67,10 @@
         </select>
         {% if form.codigo_peca.errors %}<div class="text-danger small">{{ form.codigo_peca.errors|join:', ' }}</div>{% endif %}
       </div>
+    </div>
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.quantidade.label }}</label>
+      <div class="col-sm-9">{{ form.quantidade }}{% if form.quantidade.errors %}<div class="text-danger small">{{ form.quantidade.errors|join:', ' }}</div>{% endif %}</div>
     </div>
 
     <div class="row mb-3" id="descricao-container"
@@ -140,6 +144,7 @@
     document.addEventListener('DOMContentLoaded', toggleMao);
   })();
  </script>
+
 
 
 

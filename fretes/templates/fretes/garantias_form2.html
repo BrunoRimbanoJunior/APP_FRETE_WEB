@@ -1,4 +1,4 @@
-{% extends "fretes/base.html" %}
+﻿{% extends "fretes/base.html" %}
 {% block title %}{% if is_new %}Nova{% else %}Editar{% endif %} Garantia{% endblock %}
 {% block content %}
 <div class="container" style="max-width: 800px;">
@@ -61,6 +61,10 @@
         {% if form.codigo_peca.errors %}<div class="text-danger small">{{ form.codigo_peca.errors|join:', ' }}</div>{% endif %}
       </div>
     </div>
+    <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.quantidade.label }}</label>
+      <div class="col-sm-9">{{ form.quantidade }}{% if form.quantidade.errors %}<div class="text-danger small">{{ form.quantidade.errors|join:', ' }}</div>{% endif %}</div>
+    </div>
 
     <div class="row mb-3">
       <label class="col-sm-3 col-form-label">{{ form.numero_lote.label }}</label>
@@ -121,4 +125,5 @@
     document.addEventListener('DOMContentLoaded', toggleMao);
   })();
  </script>
+
 

@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   function init() {
     const form = document.getElementById('garantia-form');
     const payloadInput = document.getElementById('id_items_payload');
@@ -15,6 +15,7 @@
 
     const produtoSearch = document.getElementById('produto-search');
     const codigoSelect = document.getElementById('id_item_codigo_peca');
+    const quantidadeInput = document.getElementById('id_item_quantidade');
     const numeroLoteInput = document.getElementById('id_item_numero_lote');
     const defeitoInput = document.getElementById('id_item_defeito');
     const valorInput = document.getElementById('id_item_valor');
@@ -62,6 +63,9 @@
       if (produtoSearch) {
         produtoSearch.value = '';
       }
+      if (quantidadeInput) {
+        quantidadeInput.value = '1';
+      }
       if (numeroLoteInput) {
         numeroLoteInput.value = '';
       }
@@ -101,11 +105,14 @@
         return;
       }
       if (!items.length) {
-        itemsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum item adicionado</td></tr>';
+        itemsTableBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum item adicionado</td></tr>';
         return;
       }
       const rows = items.map(function (item, index) {
         const produtoLabel = escapeHtml(item.produto_label || item.codigo_peca || '');
+        const quantidadeValor = item && item.quantidade !== undefined && item.quantidade !== null
+          ? parseInt(item.quantidade, 10) || 1
+          : 1;
         const defeito = escapeHtml(item.defeito || '');
         const valor = item.valor !== null && item.valor !== undefined && item.valor !== ''
           ? Number(item.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -124,6 +131,7 @@
         const retorno = retornoParts.join(' - ');
         return '<tr data-index="' + index + '">' +
           '<td>' + produtoLabel + '</td>' +
+          '<td>' + quantidadeValor + '</td>' +
           '<td>' + defeito + '</td>' +
           '<td>' + valor + '</td>' +
           '<td>' + mao + maoValor + '</td>' +
@@ -139,6 +147,7 @@
 
     function getItemFromForm() {
       const codigo = codigoSelect ? (codigoSelect.value || '').trim() : '';
+      const quantidadeRaw = quantidadeInput ? quantidadeInput.value : '1';
       const numeroLote = numeroLoteInput ? (numeroLoteInput.value || '').trim() : '';
       const defeito = defeitoInput ? (defeitoInput.value || '').trim() : '';
       const valorRaw = valorInput ? valorInput.value : '';
@@ -153,6 +162,11 @@
         alert('Selecione um produto para adicionar.');
         return null;
       }
+      const quantidade = quantidadeRaw !== '' ? parseInt(quantidadeRaw, 10) : 1;
+      if (Number.isNaN(quantidade) || quantidade < 1) {
+        alert('Informe uma quantidade valida.');
+        return null;
+      }
       if (!defeito) {
         alert('Informe o defeito do produto.');
         return null;
@@ -161,7 +175,6 @@
         alert('Informe o valor de mao de obra.');
         return null;
       }
-
       if (valor !== null && Number.isNaN(valor)) {
         alert('Informe um valor numerico valido.');
         return null;
@@ -174,6 +187,7 @@
 
       return {
         codigo_peca: codigo,
+        quantidade: quantidade,
         numero_lote: numeroLote,
         defeito: defeito,
         valor: valor !== null && !Number.isNaN(valor) ? valor : null,
@@ -233,6 +247,9 @@
           }
           codigoSelect.value = item.codigo_peca;
         }
+        if (quantidadeInput) {
+          quantidadeInput.value = item.quantidade !== undefined && item.quantidade !== null ? item.quantidade : 1;
+        }
         if (numeroLoteInput) {
           numeroLoteInput.value = item.numero_lote || '';
         }
@@ -278,7 +295,11 @@
       } else {
         items = items.map(function (item) {
           if (item && typeof item === 'object') {
-            return Object.assign({ produto_label: '' }, item);
+            const normalizado = item.quantidade !== undefined && item.quantidade !== null
+              ? parseInt(item.quantidade, 10) || 1
+              : 1;
+                        const label = item && item.produto_label ? item.produto_label : "";
+            return Object.assign({ quantidade: normalizado, produto_label: label }, item);
           }
           return item;
         });
@@ -304,3 +325,4 @@
     init();
   }
 })();
+

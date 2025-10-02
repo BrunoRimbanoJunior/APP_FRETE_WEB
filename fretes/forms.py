@@ -14,12 +14,12 @@ class CalcularFreteForm(forms.Form):
         data = super().clean()
         numero_pedido = data.get("numero_pedido")
         if not numero_pedido:
-            raise forms.ValidationError("Informe o número do pedido.")
+            raise forms.ValidationError("Informe o numero do pedido.")
 
         try:
             pedido = Pedido.objects.get(numero_pedido=numero_pedido)
         except Pedido.DoesNotExist:
-            raise forms.ValidationError("Pedido não encontrado. Cadastre o pedido antes de calcular.")
+            raise forms.ValidationError("Pedido nao encontrado. Cadastre o pedido antes de calcular.")
 
         carrier = data.get("carrier") or pedido.carrier
         if not carrier:
@@ -79,18 +79,18 @@ class GarantiaForm(ModelForm):
     class Meta:
         model = Garantia
         fields = [
-            "cliente", "codigo_peca", "defeito", "numero_lote",
+            "cliente", "codigo_peca", "quantidade", "defeito", "numero_lote",
             "nota_recebida", "valor", "data_recebimento",
             "nota_retorno", "data_retorno", "mao_de_obra", "valor_mao_de_obra"
         ]
         widgets = {
             "cliente": forms.Select(attrs={"class": "form-select"}),
             "codigo_peca": forms.TextInput(attrs={"class": "form-control"}),
+            "quantidade": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "defeito": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "numero_lote": forms.TextInput(attrs={"class": "form-control"}),
             "nota_recebida": forms.TextInput(attrs={"class": "form-control"}),
             "valor": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            # Fundamental: especificar o format para preencher inputs type=date
             "data_recebimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "form-control"}),
             "nota_retorno": forms.TextInput(attrs={"class": "form-control"}),
             "data_retorno": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
@@ -100,10 +100,7 @@ class GarantiaForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Aceita tanto ISO quanto pt-BR; e garante render correto do valor atual
         self.fields["data_recebimento"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
-        # Quando o form é instanciado com 'instance', o Django já define initial,
-        # mas garantimos aqui por segurança para o widget type=date.
         if self.instance and getattr(self.instance, "data_recebimento", None):
             self.initial.setdefault("data_recebimento", self.instance.data_recebimento)
 
@@ -113,31 +110,40 @@ class GarantiaForm(ModelForm):
             return codigo
         exists = Produto.objects.filter(codigo=codigo).exists()
         if not exists:
-            # Permite manter o código já salvo em registros antigos
             if getattr(self.instance, 'pk', None) and self.instance.codigo_peca == codigo:
                 return codigo
             raise forms.ValidationError(
-                "Código de peça não encontrado entre os produtos cadastrados."
+                "Codigo de peca nao encontrado entre os produtos cadastrados."
             )
         return codigo
+
+    def clean_quantidade(self):
+        quantidade = self.cleaned_data.get("quantidade")
+        if quantidade in (None, ""):
+            return 1
+        try:
+            quantidade_int = int(quantidade)
+        except (TypeError, ValueError):
+            raise forms.ValidationError("Informe uma quantidade valida.")
+        if quantidade_int < 1:
+            raise forms.ValidationError("A quantidade deve ser pelo menos 1.")
+        return quantidade_int
 
     def clean(self):
         data = super().clean()
         if data.get("mao_de_obra"):
             if not data.get("valor_mao_de_obra"):
-                self.add_error("valor_mao_de_obra", "Informe o valor da mão de obra.")
+                self.add_error("valor_mao_de_obra", "Informe o valor da mao de obra.")
         else:
-            # Se não houver mão de obra, força valor 0 para evitar None
             data["valor_mao_de_obra"] = data.get("valor_mao_de_obra") or 0
         return data
 
 
-# Formulário de cabeçalho (para cadastro múltiplo)
 class GarantiaHeaderForm(forms.Form):
     nota_recebida = forms.CharField(
         label="Nota recebida",
         required=True,
-        error_messages={"required": "Informe o número da nota recebida."},
+        error_messages={"required": "Informe o numero da nota recebida."},
         widget=forms.TextInput(attrs={"class": "form-control"}),
     )
     cliente = forms.ModelChoiceField(
@@ -156,26 +162,40 @@ class GarantiaHeaderForm(forms.Form):
 
 
 class GarantiaItemForm(forms.Form):
-    codigo_peca = forms.ChoiceField(label="Código da peça", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
-    numero_lote = forms.CharField(label="Número do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    codigo_peca = forms.ChoiceField(label="Codigo da peca", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
+    quantidade = forms.IntegerField(label="Quantidade", min_value=1, initial=1, widget=forms.NumberInput(attrs={"class": "form-control", "min": 1}))
+    numero_lote = forms.CharField(label="Numero do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     defeito = forms.CharField(label="Defeito", widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}))
     valor = forms.DecimalField(label="Valor", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
     nota_retorno = forms.CharField(label="Nota de retorno", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     data_retorno = forms.DateField(label="Data de retorno", required=False, widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}))
-    mao_de_obra = forms.BooleanField(label="Com mão de obra", required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
-    valor_mao_de_obra = forms.DecimalField(label="Valor mão de obra", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
+    mao_de_obra = forms.BooleanField(label="Com mao de obra", required=False, widget=forms.CheckboxInput(attrs={"class": "form-check-input"}))
+    valor_mao_de_obra = forms.DecimalField(label="Valor mao de obra", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
 
     def clean_codigo_peca(self):
         codigo = self.cleaned_data.get("codigo_peca", "")
         if not Produto.objects.filter(codigo=codigo).exists():
-            raise forms.ValidationError("Código de peça inválido.")
+            raise forms.ValidationError("Codigo de peca invalido.")
         return codigo
+
+    def clean_quantidade(self):
+        quantidade = self.cleaned_data.get("quantidade")
+        if quantidade in (None, ""):
+            return 1
+        try:
+            quantidade_int = int(quantidade)
+        except (TypeError, ValueError):
+            raise forms.ValidationError("Informe uma quantidade valida.")
+        if quantidade_int < 1:
+            raise forms.ValidationError("A quantidade deve ser pelo menos 1.")
+        return quantidade_int
 
     def clean(self):
         data = super().clean()
         if data.get("mao_de_obra"):
             if not data.get("valor_mao_de_obra"):
-                self.add_error("valor_mao_de_obra", "Informe o valor da mão de obra.")
+                self.add_error("valor_mao_de_obra", "Informe o valor da mao de obra.")
         else:
             data["valor_mao_de_obra"] = data.get("valor_mao_de_obra") or 0
         return data
+

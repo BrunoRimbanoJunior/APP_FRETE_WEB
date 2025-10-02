@@ -1,4 +1,4 @@
-
+﻿
 from decimal import Decimal
 from datetime import date, datetime
 from django.db import models
@@ -28,10 +28,10 @@ class FreightTable(models.Model):
     peso_ate_200 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     peso_ate_300 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     frete_ton = models.DecimalField("Frete por Tonelada", max_digits=10, decimal_places=2, default=0)
-    frete_minimo = models.DecimalField("Frete Mínimo", max_digits=10, decimal_places=2, default=0)
-    pedagio = models.DecimalField("Pedágio", max_digits=10, decimal_places=2, default=0)
+    frete_minimo = models.DecimalField("Frete Minimo", max_digits=10, decimal_places=2, default=0)
+    pedagio = models.DecimalField("Pedagio", max_digits=10, decimal_places=2, default=0)
     frete_valor_perc = models.DecimalField("Frete Valor %", max_digits=6, decimal_places=3, default=0)
-    fator_peso_cubico = models.DecimalField("Fator Peso Cúbico", max_digits=10, decimal_places=2, default=230)
+    fator_peso_cubico = models.DecimalField("Fator Peso Cubico", max_digits=10, decimal_places=2, default=230)
 
     class Meta:
         verbose_name = "Tabela de Frete"
@@ -60,7 +60,7 @@ class PedidoVolume(models.Model):
     altura_cm = models.DecimalField(max_digits=8, decimal_places=2)
     comprimento_cm = models.DecimalField(max_digits=8, decimal_places=2)
     quantidade = models.PositiveIntegerField(default=1)
-    # ⚠️ importante: default=0 para não quebrar no insert
+    # importante: default=0 para nao quebrar no insert
     m3 = models.DecimalField(max_digits=12, decimal_places=3, default=0)
 
     class Meta:
@@ -68,7 +68,7 @@ class PedidoVolume(models.Model):
         verbose_name_plural = "Volumes do Pedido"
 
     def __str__(self) -> str:
-        return f"{self.pedido} - {self.largura_cm}×{self.altura_cm}×{self.comprimento_cm} × {self.quantidade}"
+        return f"{self.pedido} - {self.largura_cm}x{self.altura_cm}x{self.comprimento_cm} x {self.quantidade}"
 
 class FreteCalculado(models.Model):
     data_calculo = models.DateField(auto_now_add=True)
@@ -96,10 +96,10 @@ class FreteCalculado(models.Model):
 
 # Novos cadastros
 class Produto(models.Model):
-    codigo = models.CharField("Código", max_length=60, unique=True)
-    descricao = models.CharField("Descrição", max_length=255)
+    codigo = models.CharField("Codigo", max_length=60, unique=True)
+    descricao = models.CharField("Descricao", max_length=255)
     peso_bruto_kg = models.DecimalField("Peso bruto (kg)", max_digits=10, decimal_places=3, default=0)
-    peso_liquido_kg = models.DecimalField("Peso líquido (kg)", max_digits=10, decimal_places=3, default=0)
+    peso_liquido_kg = models.DecimalField("Peso liquido (kg)", max_digits=10, decimal_places=3, default=0)
     largura_cm = models.DecimalField("Largura (cm)", max_digits=8, decimal_places=2, default=0)
     altura_cm = models.DecimalField("Altura (cm)", max_digits=8, decimal_places=2, default=0)
     comprimento_cm = models.DecimalField("Comprimento (cm)", max_digits=8, decimal_places=2, default=0)
@@ -111,7 +111,7 @@ class Produto(models.Model):
         permissions = (
             ("can_import_products", "Pode importar produtos"),
             ("can_import_clients", "Pode importar clientes"),
-            ("can_view_reports", "Pode acessar relatórios"),
+            ("can_view_reports", "Pode acessar relatorios"),
             ("can_use_calcular", "Pode usar a ferramenta Calcular"),
         )
 
@@ -122,7 +122,7 @@ class Produto(models.Model):
 class Cliente(models.Model):
     nome = models.CharField("Nome", max_length=255)
     cnpj = models.CharField("CNPJ", max_length=20, unique=True)
-    endereco = models.CharField("Endereço", max_length=255, blank=True)
+    endereco = models.CharField("Endereco", max_length=255, blank=True)
     cidade = models.CharField("Cidade", max_length=120, blank=True)
     estado = models.CharField("Estado", max_length=2, blank=True)
     email = models.EmailField("Email", blank=True)
@@ -142,16 +142,17 @@ class Garantia(models.Model):
     STATUS_ATENDIDO = "atendido"
 
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="garantias")
-    codigo_peca = models.CharField("Código da peça", max_length=80)
+    codigo_peca = models.CharField("Codigo da peca", max_length=80)
+    quantidade = models.PositiveIntegerField("Quantidade", default=1)
     defeito = models.TextField("Defeito")
-    numero_lote = models.CharField("Número do lote", max_length=80, blank=True)
+    numero_lote = models.CharField("Numero do lote", max_length=80, blank=True)
     nota_recebida = models.CharField("Nota recebida", max_length=80)
     valor = models.DecimalField("Valor", max_digits=12, decimal_places=2, default=0)
     data_recebimento = models.DateField("Data de recebimento")
     nota_retorno = models.CharField("Nota de retorno", max_length=80, blank=True)
     data_retorno = models.DateField("Data de retorno", null=True, blank=True)
-    mao_de_obra = models.BooleanField("Com mão de obra", default=False)
-    valor_mao_de_obra = models.DecimalField("Valor mão de obra", max_digits=12, decimal_places=2, default=0)
+    mao_de_obra = models.BooleanField("Com mao de obra", default=False)
+    valor_mao_de_obra = models.DecimalField("Valor mao de obra", max_digits=12, decimal_places=2, default=0)
 
     class Meta:
         ordering = ["-data_recebimento", "-id"]
@@ -278,6 +279,7 @@ def _post_save_log(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=PedidoVolume)
 def _post_delete_log(sender, instance, **kwargs):
     _log_model_action(instance, "delete")
+
 
 
 

@@ -559,6 +559,7 @@ def garantia_create_multi(request):
                     Garantia.objects.create(
                         cliente=dados["cliente"],
                         codigo_peca=item["codigo_peca"],
+                        quantidade=item.get("quantidade") or 1,
                         defeito=item["defeito"],
                         numero_lote=item.get("numero_lote", ""),
                         nota_recebida=dados["nota_recebida"],

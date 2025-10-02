@@ -1,4 +1,4 @@
-{% extends "fretes/base.html" %}
+﻿{% extends "fretes/base.html" %}
 {% load static %}
 {% block title %}Nova Garantia{% endblock %}
 {% block content %}
@@ -72,6 +72,10 @@
                     hx-include="#produto-search,#id_item_codigo_peca">Buscar</button>
           </div>
         </div>
+        <div class="row mb-2">
+          <label class="col-sm-3 col-form-label">Quantidade</label>
+          <div class="col-sm-9"><input type="number" min="1" value="1" id="id_item_quantidade" class="form-control"></div>
+        </div>
 
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Codigo da peca</label>
@@ -134,6 +138,7 @@
         <thead>
           <tr>
             <th>Produto</th>
+            <th>Qtd</th>         
             <th>Defeito</th>
             <th>Valor</th>
             <th>Mao de obra</th>
@@ -159,5 +164,6 @@
 
 <script src="{% static 'fretes/js/garantias_multi_form.js' %}" defer></script>
 {% endblock %}
+
 
 
