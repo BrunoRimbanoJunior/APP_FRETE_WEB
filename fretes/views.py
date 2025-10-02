@@ -1,4 +1,4 @@
-from decimal import Decimal, InvalidOperation
+﻿from decimal import Decimal, InvalidOperation
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import Http404
@@ -187,31 +187,31 @@ def calcular_view(request):
     if request.method == "POST":
         form = CalcularFreteForm(request.POST)
         if form.is_valid():
-            # 💡 Obtemos o número do pedido dos dados limpos do formulário
+            # ðŸ’¡ Obtemos o nÃºmero do pedido dos dados limpos do formulÃ¡rio
             numero_pedido = form.cleaned_data["numero_pedido"]
             carrier = form.cleaned_data["carrier"]
             kg_nota = form.cleaned_data["kg_nota"]
             valor_nota = form.cleaned_data.get("valor_nota")
             numero_nota = form.cleaned_data.get("numero_nota", "")
 
-            # 💡 Buscamos o pedido novamente, desta vez com prefetch_related
-            # para garantir que os volumes estão carregados.
+            # ðŸ’¡ Buscamos o pedido novamente, desta vez com prefetch_related
+            # para garantir que os volumes estÃ£o carregados.
             try:
                 pedido = Pedido.objects.prefetch_related('volumes').get(numero_pedido=numero_pedido)
             except Pedido.DoesNotExist:
-                # Caso o pedido não seja encontrado (mesmo após a validação)
-                form.add_error("numero_pedido", "Pedido não encontrado.")
+                # Caso o pedido nÃ£o seja encontrado (mesmo apÃ³s a validaÃ§Ã£o)
+                form.add_error("numero_pedido", "Pedido nÃ£o encontrado.")
                 context["form"] = form
                 return render(request, "fretes/calcular.html", context)
 
-            # Nova lógica: recalcula o m3 total do pedido a partir dos volumes
+            # Nova lÃ³gica: recalcula o m3 total do pedido a partir dos volumes
             m3_total_pedido = _calcular_m3_total_pedido(pedido)
 
             # Atualiza o campo m3 do pedido com o valor total calculado
             pedido.m3 = m3_total_pedido
             pedido.save(update_fields=["m3"])
             
-            # Passa o m3 atualizado para a função de cálculo de frete
+            # Passa o m3 atualizado para a funÃ§Ã£o de cÃ¡lculo de frete
             r = calcular_frete(pedido, carrier, kg_nota, valor_nota)
 
             FreteCalculado.objects.update_or_create(
@@ -337,10 +337,13 @@ def pedidos_autocomplete(request):
 # Produtos
 def produto_list(request):
     codigo = request.GET.get("codigo", "").strip()
+    descricao = request.GET.get("descricao", "").strip()
     qs = Produto.objects.all().order_by("codigo")
     if codigo:
         qs = qs.filter(codigo__icontains=codigo)
-    return render(request, "fretes/produtos_list.html", {"produtos": qs, "codigo": codigo})
+    if descricao:
+        qs = qs.filter(descricao__icontains=descricao)
+    return render(request, "fretes/produtos_list.html", {"produtos": qs, "codigo": codigo, "descricao": descricao})
 
 
 @permission_required('fretes.add_produto', raise_exception=True)
@@ -479,7 +482,7 @@ def garantia_create(request):
             messages.success(request, "Garantia registrada com sucesso.")
             return redirect("fretes:garantia_list")
         else:
-            messages.error(request, "Corrija os erros do formulário.")
+            messages.error(request, "Corrija os erros do formulÃ¡rio.")
     else:
         form = GarantiaForm()
     produtos = Produto.objects.all().order_by("codigo")
@@ -495,7 +498,7 @@ def garantia_update(request, pk: int):
             messages.success(request, "Garantia atualizada.")
             return redirect("fretes:garantia_list")
         else:
-            messages.error(request, "Corrija os erros do formulário.")
+            messages.error(request, "Corrija os erros do formulÃ¡rio.")
     else:
         form = GarantiaForm(instance=garantia)
     produtos = Produto.objects.all().order_by("codigo")
@@ -596,10 +599,10 @@ def admin_import_produtos(request):
             wb = load_workbook(filename=arquivo, data_only=True)
             ws = wb.active
         except Exception as e:
-            messages.error(request, f"Arquivo inválido: {e}")
+            messages.error(request, f"Arquivo invÃ¡lido: {e}")
             return render(request, "fretes/import_produtos.html", context)
 
-        # Normaliza cabeçalhos removendo acentos e padronizando (CM)
+        # Normaliza cabeÃ§alhos removendo acentos e padronizando (CM)
         import unicodedata as _ud
 
         def norm_header(s: str) -> str:
@@ -616,7 +619,7 @@ def admin_import_produtos(request):
         headers = [norm_header(h) for h in headers_raw]
         index = {h: i for i, h in enumerate(headers)}
 
-        # Aceita variações com/sem acentos e parênteses
+        # Aceita variaÃ§Ãµes com/sem acentos e parÃªnteses
         required = {
             "CODIGO": ["CODIGO"],
             "DESCRICAO": ["DESCRICAO"],
@@ -637,7 +640,7 @@ def admin_import_produtos(request):
         missing_keys = [k for k in required if not find_col(k)]
         if missing_keys:
             msgs = ", ".join(missing_keys)
-            messages.error(request, f"Colunas obrigatórias ausentes: {msgs}")
+            messages.error(request, f"Colunas obrigatÃ³rias ausentes: {msgs}")
             return render(request, "fretes/import_produtos.html", context)
 
             if isinstance(v, (int, float)):
@@ -662,7 +665,7 @@ def admin_import_produtos(request):
                     codigo = str(val("CODIGO") or "").strip()
                     if not codigo:
                         continue
-                    # Concatena descrição + aplicação, normalizando quebras de linha
+                    # Concatena descriÃ§Ã£o + aplicaÃ§Ã£o, normalizando quebras de linha
                     def collapse_ws(s: str) -> str:
                         return " ".join(str(s).split())
                     descricao_base = collapse_ws(val("DESCRICAO") or "")
@@ -701,7 +704,7 @@ def admin_import_produtos(request):
             messages.error(request, f"Falha ao importar na linha {linhas+1}: {e}")
             return render(request, "fretes/import_produtos.html", context)
 
-        messages.success(request, f"Importação concluída. Linhas lidas: {linhas}. Criados: {criados}. Atualizados: {atualizados}.")
+        messages.success(request, f"ImportaÃ§Ã£o concluÃ­da. Linhas lidas: {linhas}. Criados: {criados}. Atualizados: {atualizados}.")
 
     return render(request, "fretes/import_produtos.html", context)
 
@@ -715,7 +718,7 @@ def admin_import_clientes(request):
             wb = load_workbook(filename=arquivo, data_only=True)
             ws = wb.active
         except Exception as e:
-            messages.error(request, f"Arquivo inválido: {e}")
+            messages.error(request, f"Arquivo invÃ¡lido: {e}")
             return render(request, "fretes/import_clientes.html", context)
 
         headers = [str(c.value).strip().upper() if c.value is not None else "" for c in next(ws.iter_rows(min_row=1, max_row=1))]
@@ -724,7 +727,7 @@ def admin_import_clientes(request):
         required = ["NOME", "CNPJ", "ENDERECO", "CIDADE", "ESTADO", "EMAIL", "TELEFONE"]
         missing = [h for h in required if h not in index]
         if missing:
-            messages.error(request, f"Colunas obrigatórias ausentes: {', '.join(missing)}")
+            messages.error(request, f"Colunas obrigatÃ³rias ausentes: {', '.join(missing)}")
             return render(request, "fretes/import_clientes.html", context)
 
         def cell(col, row):
@@ -770,7 +773,7 @@ def admin_import_clientes(request):
 
         messages.success(
             request,
-            f"Importação de clientes concluída. Criados: {criados}. Atualizados: {atualizados}. Ignorados (faltando nome/cnpj): {ignorados}.",
+            f"ImportaÃ§Ã£o de clientes concluÃ­da. Criados: {criados}. Atualizados: {atualizados}. Ignorados (faltando nome/cnpj): {ignorados}.",
         )
 
     return render(request, "fretes/import_clientes.html", context)
@@ -833,6 +836,7 @@ def audit_log_view(request):
         'end_date': end_date,
         'q': q,
     })
+
 
 
 
