@@ -1,7 +1,8 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import Http404
-from django.forms import inlineformset_factory, formset_factory
+from django.forms import inlineformset_factory
 from django import forms as djforms
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import permission_required, login_required
@@ -21,22 +22,35 @@ from django.utils.dateparse import parse_date
 
 def _last_non_empty_param(request, *keys, suffixes=()):
     querydict = request.GET
+
+    def _clean(value):
+        if value is None:
+            return ""
+        value = str(value).strip()
+        return value
+
     for key in keys:
         values = querydict.getlist(key)
         if not values:
             continue
         for value in reversed(values):
-            if value and value.strip():
-                return value.strip()
-    for suffix in suffixes:
-        matching_keys = [k for k in querydict.keys() if k.endswith(suffix)]
-        for key in reversed(matching_keys):
+            cleaned = _clean(value)
+            if cleaned:
+                return cleaned
+
+    if suffixes:
+        ordered_keys = list(querydict.keys())
+        for key in reversed(ordered_keys):
+            if not any(key.endswith(suffix) for suffix in suffixes):
+                continue
             values = querydict.getlist(key)
             if not values:
                 continue
             for value in reversed(values):
-                if value and value.strip():
-                    return value.strip()
+                cleaned = _clean(value)
+                if cleaned:
+                    return cleaned
+
     return ""
 
 VolumeFormSet = inlineformset_factory(
@@ -98,6 +112,19 @@ def _total_volumes_from_formset(formset):
         except (TypeError, ValueError):
             continue
     return total
+
+
+def _parse_decimal_value(value):
+    if value is None or value == "":
+        return Decimal("0")
+    if isinstance(value, (int, float)):
+        return Decimal(str(value))
+    s = str(value).strip()
+    s = s.replace(".", "").replace(",", ".")
+    try:
+        return Decimal(s)
+    except InvalidOperation:
+        return Decimal("0")
 
 
 def pedido_create(request):
@@ -476,7 +503,7 @@ def garantia_update(request, pk: int):
 
 
 def produtos_options(request):
-    q = _last_non_empty_param(request, "q", "codigo", "codigo_peca")
+    q = _last_non_empty_param(request, "q", "codigo", "codigo_peca", suffixes=("-q",))
     qs = Produto.objects.all().order_by("codigo")
     if q:
         qs = qs.filter(Q(codigo__icontains=q) | Q(descricao__icontains=q))
@@ -494,54 +521,70 @@ def clientes_options(request):
 
 @permission_required('fretes.add_garantia', raise_exception=True)
 def garantia_create_multi(request):
-    ItemFormSet = formset_factory(GarantiaItemForm, extra=1, can_delete=True)
     produtos_qs = Produto.objects.all().order_by("codigo")
     produto_choices = [(p.codigo, f"{p.codigo} - {p.descricao}") for p in produtos_qs]
 
     if request.method == "POST":
         header_form = GarantiaHeaderForm(request.POST)
-        formset = ItemFormSet(request.POST, prefix="items")
-        for f in formset.forms:
-            f.fields["codigo_peca"].choices = produto_choices
-        if header_form.is_valid() and formset.is_valid():
+        raw_items = request.POST.get("items_payload") or "[]"
+        try:
+            items_data = json.loads(raw_items)
+            if not isinstance(items_data, list):
+                raise ValueError
+        except (json.JSONDecodeError, ValueError):
+            items_data = []
+            header_form.add_error(None, "Nao foi possivel interpretar a lista de produtos enviada.")
+
+        cleaned_items = []
+        for idx, data in enumerate(items_data, start=1):
+            item_form = GarantiaItemForm(data)
+            item_form.fields["codigo_peca"].choices = produto_choices
+            if item_form.is_valid():
+                cleaned_items.append(item_form.cleaned_data)
+            else:
+                for field, errors in item_form.errors.items():
+                    messages.error(
+                        request,
+                        f"Item {idx}: {field} - {', '.join(errors)}",
+                    )
+
+        if not cleaned_items:
+            messages.error(request, "Adicione ao menos um produto antes de salvar.")
+
+        if header_form.is_valid() and cleaned_items:
             dados = header_form.cleaned_data
             created = 0
-            for f in formset.forms:
-                if f.cleaned_data.get("DELETE"):
-                    continue
-                cd = f.cleaned_data
-                Garantia.objects.create(
-                    cliente=dados["cliente"],
-                    codigo_peca=cd["codigo_peca"],
-                    defeito=cd["defeito"],
-                    numero_lote=cd.get("numero_lote", ""),
-                    nota_recebida=dados["nota_recebida"],
-                    valor=cd.get("valor") or 0,
-                    data_recebimento=dados["data_recebimento"],
-                    nota_retorno=cd.get("nota_retorno", ""),
-                    data_retorno=cd.get("data_retorno"),
-                    mao_de_obra=cd.get("mao_de_obra") or False,
-                    valor_mao_de_obra=cd.get("valor_mao_de_obra") or 0,
-                )
-                created += 1
-            messages.success(request, f"{created} produto(s) adicionados à garantia.")
+            with transaction.atomic():
+                for item in cleaned_items:
+                    Garantia.objects.create(
+                        cliente=dados["cliente"],
+                        codigo_peca=item["codigo_peca"],
+                        defeito=item["defeito"],
+                        numero_lote=item.get("numero_lote", ""),
+                        nota_recebida=dados["nota_recebida"],
+                        valor=item.get("valor") or 0,
+                        data_recebimento=dados["data_recebimento"],
+                        nota_retorno=item.get("nota_retorno", ""),
+                        data_retorno=item.get("data_retorno"),
+                        mao_de_obra=item.get("mao_de_obra") or False,
+                        valor_mao_de_obra=item.get("valor_mao_de_obra") or 0,
+                    )
+                    created += 1
+            messages.success(request, f"{created} produto(s) adicionados a garantia.")
             return redirect("fretes:garantia_list")
-        else:
-            messages.error(request, "Corrija os erros do formulário.")
+
+        items_json = raw_items if raw_items else "[]"
     else:
         header_form = GarantiaHeaderForm()
-        formset = ItemFormSet(prefix="items")
-        for f in formset.forms:
-            f.fields["codigo_peca"].choices = produto_choices
+        items_json = "[]"
+
     ctx = {
         "header_form": header_form,
-        "formset": formset,
         "produtos": produtos_qs,
+        "items_json": items_json,
         "is_new": True,
     }
     return render(request, "fretes/garantias_multi_form.html", ctx)
-
-
 # ---------------- Ferramentas administrativas ----------------
 @permission_required('fretes.can_import_products', raise_exception=True)
 def admin_import_produtos(request):
@@ -596,14 +639,9 @@ def admin_import_produtos(request):
             messages.error(request, f"Colunas obrigatórias ausentes: {msgs}")
             return render(request, "fretes/import_produtos.html", context)
 
-        def parse_decimal(v):
-            from decimal import Decimal, InvalidOperation
-            if v is None or v == "":
-                return Decimal("0")
             if isinstance(v, (int, float)):
                 return Decimal(str(v))
             s = str(v).strip()
-            # normaliza notação brasileira
             s = s.replace(".", "").replace(",", ".")
             try:
                 return Decimal(s)
@@ -637,11 +675,11 @@ def admin_import_produtos(request):
                     if len(descricao) > max_len:
                         descricao = descricao[:max_len]
 
-                    peso_bruto = parse_decimal(val("PESO BRUTO"))
-                    peso_liquido = parse_decimal(val("PESO LIQUIDO"))
-                    largura = parse_decimal(val("LARGURA CM"))
-                    altura = parse_decimal(val("ALTURA CM"))
-                    comprimento = parse_decimal(val("COMPRIMENTO CM"))
+                    peso_bruto = _parse_decimal_value(val("PESO BRUTO"))
+                    peso_liquido = _parse_decimal_value(val("PESO LIQUIDO"))
+                    largura = _parse_decimal_value(val("LARGURA CM"))
+                    altura = _parse_decimal_value(val("ALTURA CM"))
+                    comprimento = _parse_decimal_value(val("COMPRIMENTO CM"))
 
                     _, created = Produto.objects.update_or_create(
                         codigo=codigo,
@@ -794,4 +832,22 @@ def audit_log_view(request):
         'end_date': end_date,
         'q': q,
     })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
