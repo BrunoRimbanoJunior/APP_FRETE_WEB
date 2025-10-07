@@ -1,7 +1,35 @@
 {% extends "fretes/base.html" %}
 {% block title %}Produtos{% endblock %}
 {% block content %}
-<div class="container">
+<div class="container-fluid produtos-list-wrapper">
+  <style>
+    .produtos-list-wrapper {
+      max-width: none;
+    }
+    .produtos-list-wrapper .descricao-col {
+      max-width: 100%;
+      min-width: min(24rem, 100%);
+      white-space: normal;
+      word-break: break-word;
+    }
+    @media (max-width: 576px) {
+      .produtos-list-wrapper {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+      .produtos-list-wrapper .table-responsive {
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
+      }
+      .produtos-list-wrapper table {
+        font-size: 0.94rem;
+      }
+      .produtos-list-wrapper .descricao-col {
+        font-weight: 500;
+      }
+    }
+  </style>
+
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="m-0">Produtos</h5>
     <a class="btn btn-primary" href="{% url 'fretes:produto_create' %}">Novo Produto</a>
@@ -38,7 +66,7 @@
         {% for p in produtos %}
           <tr>
             <td>{{ p.codigo }}</td>
-            <td class="text-truncate" style="max-width: 320px;" title="{{ p.descricao }}">{{ p.descricao }}</td>
+            <td class="descricao-col" title="{{ p.descricao }}">{{ p.descricao }}</td>
             <td class="text-break">{{ p.enderecos|default:"-" }}</td>
             <td class="text-end">
               <a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:produto_update' p.id %}">Editar</a>

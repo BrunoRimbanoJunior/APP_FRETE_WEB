@@ -1,7 +1,41 @@
-{% extends "fretes/base.html" %}
+﻿{% extends "fretes/base.html" %}
 {% block title %}Garantias{% endblock %}
 {% block content %}
-<div class="container">
+<div class="container garantias-wrapper">\n  <style>
+    .garantias-wrapper .table {
+      font-size: 0.9rem;
+    }
+    .garantias-wrapper .table td,
+    .garantias-wrapper .table th {
+      vertical-align: middle;
+    }
+    .garantias-wrapper .cliente-col {
+      max-width: 320px;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .garantias-wrapper .table-responsive {
+      overflow-x: auto;
+    }
+    @media (max-width: 576px) {
+      .garantias-wrapper .table {
+        font-size: 0.82rem;
+      }
+      .garantias-wrapper .table thead tr th,
+      .garantias-wrapper .table tbody tr td {
+        padding: 0.35rem 0.45rem;
+      }
+      .garantias-wrapper .cliente-col {
+        max-width: 240px;
+      }
+      .garantias-wrapper .badge {
+        font-size: 0.75rem;
+      }
+      .garantias-wrapper .btn-sm {
+        padding: 0.2rem 0.5rem;
+      }
+    }
+  </style>
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="m-0">Controle de Garantias</h5>
     <a class="btn btn-primary" href="{% url 'fretes:garantia_create' %}">Nova Garantia</a>
@@ -57,7 +91,7 @@
         <tr>
           <th>ID</th>
           <th>Cliente</th>
-          <th>Cód. Peça</th>
+          <th>Cad. Peças</th>
           <th>Nota Recebida</th>
           <th>Valor</th>
           <th>Recebido em</th>
@@ -71,7 +105,7 @@
         {% for g in garantias %}
           <tr>
             <td>{{ g.id }}</td>
-            <td>{{ g.cliente.nome }} ({{ g.cliente.cnpj }})</td>
+            <td class="cliente-col">{{ g.cliente.nome }} ({{ g.cliente.cnpj }})</td>
             <td>{{ g.codigo_peca }}</td>
             <td>{{ g.nota_recebida }}</td>
             <td>{{ g.valor }}</td>
@@ -95,3 +129,6 @@
   </div>
 </div>
 {% endblock %}
+
+
+
