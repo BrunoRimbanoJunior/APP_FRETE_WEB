@@ -98,6 +98,7 @@ class FreteCalculado(models.Model):
 class Produto(models.Model):
     codigo = models.CharField("Codigo", max_length=60, unique=True)
     descricao = models.CharField("Descricao", max_length=255)
+    enderecos = models.CharField("Enderecos", max_length=1024, blank=True)
     peso_bruto_kg = models.DecimalField("Peso bruto (kg)", max_digits=10, decimal_places=3, default=0)
     peso_liquido_kg = models.DecimalField("Peso liquido (kg)", max_digits=10, decimal_places=3, default=0)
     largura_cm = models.DecimalField("Largura (cm)", max_digits=8, decimal_places=2, default=0)

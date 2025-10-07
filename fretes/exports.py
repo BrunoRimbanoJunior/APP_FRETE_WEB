@@ -120,6 +120,39 @@ def exportar_pedido_pdf(pedido):
     resp["Content-Disposition"] = f'attachment; filename="pedido_{pedido.id}.pdf"'
     return resp
 
+
+def exportar_produtos_excel(queryset):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Produtos"
+
+    headers = [
+        "Codigo", "Descricao", "Enderecos", "Peso bruto (kg)", "Peso liquido (kg)",
+        "Largura (cm)", "Altura (cm)", "Comprimento (cm)"
+    ]
+    ws.append(headers)
+
+    for produto in queryset:
+        ws.append([
+            produto.codigo,
+            produto.descricao,
+            produto.enderecos or "",
+            float(produto.peso_bruto_kg or 0),
+            float(produto.peso_liquido_kg or 0),
+            float(produto.largura_cm or 0),
+            float(produto.altura_cm or 0),
+            float(produto.comprimento_cm or 0),
+        ])
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    resp = HttpResponse(
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = 'attachment; filename="produtos.xlsx"'
+    return resp
 def _rows_from_queryset(queryset):
     rows = []
     for f in queryset:

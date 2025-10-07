@@ -21,6 +21,14 @@
     </div>
 
     <div class="row mb-3">
+      <label class="col-sm-3 col-form-label">{{ form.enderecos.label }}</label>
+      <div class="col-sm-9">
+        {{ form.enderecos }}
+        <div class="form-text">Separe cada endereco por virgula.</div>
+      </div>
+    </div>
+
+    <div class="row mb-3">
       <label class="col-sm-3 col-form-label">{{ form.peso_bruto_kg.label }}</label>
       <div class="col-sm-9">
         {{ form.peso_bruto_kg }}

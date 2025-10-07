@@ -15,7 +15,7 @@ from .models import Pedido, PedidoVolume, Carrier, FreteCalculado, Produto, Clie
 from .forms import CalcularFreteForm, PedidoForm, PedidoVolumeForm, ProdutoForm, ClienteForm, GarantiaForm, GarantiaHeaderForm, GarantiaItemForm
 from .filters import FreteCalculadoFilter
 from .services import calcular_frete
-from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf, exportar_pedido_excel, exportar_pedido_pdf
+from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf, exportar_pedido_excel, exportar_pedido_pdf, exportar_produtos_excel
 from django.contrib.auth import get_user_model
 from .models import AuditLog
 from django.utils.dateparse import parse_date
@@ -343,6 +343,8 @@ def produto_list(request):
         qs = qs.filter(codigo__icontains=codigo)
     if descricao:
         qs = qs.filter(descricao__icontains=descricao)
+    if request.GET.get("export") == "xlsx":
+        return exportar_produtos_excel(qs)
     return render(request, "fretes/produtos_list.html", {"produtos": qs, "codigo": codigo, "descricao": descricao})
 
 

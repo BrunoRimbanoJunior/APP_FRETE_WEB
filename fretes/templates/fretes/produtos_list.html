@@ -1,4 +1,4 @@
-﻿{% extends "fretes/base.html" %}
+{% extends "fretes/base.html" %}
 {% block title %}Produtos{% endblock %}
 {% block content %}
 <div class="container">
@@ -9,46 +9,46 @@
 
   <form method="get" class="row gy-2 gx-2 align-items-end mb-3">
     <div class="col-12 col-sm-6 col-md-4">
-      <label for="id_codigo" class="form-label">Filtrar por Código</label>
-      <input type="text" name="codigo" id="id_codigo" value="{{ codigo }}" class="form-control" placeholder="Código do produto">
+      <label for="id_codigo" class="form-label">Filtrar por Codigo</label>
+      <input type="text" name="codigo" id="id_codigo" value="{{ codigo }}" class="form-control" placeholder="Codigo do produto">
     </div>
     <div class="col-12 col-sm-6 col-md-4">
       <label for="id_descricao" class="form-label">Filtrar por descricao</label>
       <input type="text" name="descricao" id="id_descricao" value="{{ descricao }}" class="form-control" placeholder="Descricao do produto">
     </div>
-    <div class="col-12 col-sm-6 col-md-2">
-      <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
+    <div class="col-12 col-sm-6 col-md-2 d-grid">
+      <button class="btn btn-outline-secondary" type="submit">Filtrar</button>
+    </div>
+    <div class="col-12 col-sm-6 col-md-2 d-grid">
+      <button class="btn btn-success" type="submit" name="export" value="xlsx">Exportar</button>
     </div>
   </form>
 
   <div class="table-responsive">
-    <table class="table table-striped table-sm">
+    <table class="table table-striped table-sm align-middle">
       <thead>
         <tr>
-          <th>Código</th>
-          <th>Descrição</th>
-          <th>Peso Bruto (kg)</th>
-          <th>Peso Lí­quido (kg)</th>
-          <th>Dimensões (cm)</th>
-          <th></th>
+          <th>Codigo</th>
+          <th>Descricao</th>
+          <th>Enderecos</th>
+          <th class="text-end">Acoes</th>
         </tr>
       </thead>
       <tbody>
         {% for p in produtos %}
           <tr>
             <td>{{ p.codigo }}</td>
-            <td class="text-truncate" style="max-width: 320px;">{{ p.descricao }}</td>
-            <td>{{ p.peso_bruto_kg }}</td>
-            <td>{{ p.peso_liquido_kg }}</td>
-            <td>{{ p.largura_cm }} x {{ p.altura_cm }} x {{ p.comprimento_cm }}</td>
-            <td><a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:produto_update' p.id %}">Editar</a></td>
+            <td class="text-truncate" style="max-width: 320px;" title="{{ p.descricao }}">{{ p.descricao }}</td>
+            <td class="text-break">{{ p.enderecos|default:"-" }}</td>
+            <td class="text-end">
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:produto_update' p.id %}">Editar</a>
+            </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="text-center">Sem produtos cadastrados.</td></tr>
+          <tr><td colspan="4" class="text-center">Sem produtos cadastrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 {% endblock %}
-

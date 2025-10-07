@@ -46,12 +46,13 @@ class ProdutoForm(ModelForm):
     class Meta:
         model = Produto
         fields = [
-            "codigo", "descricao", "peso_bruto_kg", "peso_liquido_kg",
+            "codigo", "descricao", "enderecos", "peso_bruto_kg", "peso_liquido_kg",
             "largura_cm", "altura_cm", "comprimento_cm"
         ]
         widgets = {
-            "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "descricao": forms.TextInput(attrs={"class": "form-control"}),
+            "enderecos": forms.TextInput(attrs={"class": "form-control", "placeholder": "Endereco 1, Endereco 2"}),
             "peso_bruto_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
             "peso_liquido_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
             "largura_cm": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
@@ -198,4 +199,5 @@ class GarantiaItemForm(forms.Form):
         else:
             data["valor_mao_de_obra"] = data.get("valor_mao_de_obra") or 0
         return data
+
 
