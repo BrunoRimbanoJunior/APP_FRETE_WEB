@@ -80,14 +80,14 @@ class GarantiaForm(ModelForm):
     class Meta:
         model = Garantia
         fields = [
-            "cliente", "codigo_peca", "quantidade", "defeito", "numero_lote",
+            "cliente", "codigo_peca", "marca", "defeito", "numero_lote",
             "nota_recebida", "valor", "data_recebimento",
             "nota_retorno", "data_retorno", "mao_de_obra", "valor_mao_de_obra"
         ]
         widgets = {
             "cliente": forms.Select(attrs={"class": "form-select"}),
             "codigo_peca": forms.TextInput(attrs={"class": "form-control"}),
-            "quantidade": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
+            "marca": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex.: Marca da peca"}),
             "defeito": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "numero_lote": forms.TextInput(attrs={"class": "form-control"}),
             "nota_recebida": forms.TextInput(attrs={"class": "form-control"}),
@@ -118,17 +118,11 @@ class GarantiaForm(ModelForm):
             )
         return codigo
 
-    def clean_quantidade(self):
-        quantidade = self.cleaned_data.get("quantidade")
-        if quantidade in (None, ""):
-            return 1
-        try:
-            quantidade_int = int(quantidade)
-        except (TypeError, ValueError):
-            raise forms.ValidationError("Informe uma quantidade valida.")
-        if quantidade_int < 1:
-            raise forms.ValidationError("A quantidade deve ser pelo menos 1.")
-        return quantidade_int
+    def clean_marca(self):
+        marca = (self.cleaned_data.get("marca") or "").strip()
+        if not marca:
+            raise forms.ValidationError("Informe a marca da peca.")
+        return marca
 
     def clean(self):
         data = super().clean()
@@ -164,7 +158,7 @@ class GarantiaHeaderForm(forms.Form):
 
 class GarantiaItemForm(forms.Form):
     codigo_peca = forms.ChoiceField(label="Codigo da peca", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
-    quantidade = forms.IntegerField(label="Quantidade", min_value=1, initial=1, widget=forms.NumberInput(attrs={"class": "form-control", "min": 1}))
+    marca = forms.CharField(label="Marca", widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Marca da peca"}))
     numero_lote = forms.CharField(label="Numero do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     defeito = forms.CharField(label="Defeito", widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}))
     valor = forms.DecimalField(label="Valor", required=False, max_digits=12, decimal_places=2, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}))
@@ -179,17 +173,11 @@ class GarantiaItemForm(forms.Form):
             raise forms.ValidationError("Codigo de peca invalido.")
         return codigo
 
-    def clean_quantidade(self):
-        quantidade = self.cleaned_data.get("quantidade")
-        if quantidade in (None, ""):
-            return 1
-        try:
-            quantidade_int = int(quantidade)
-        except (TypeError, ValueError):
-            raise forms.ValidationError("Informe uma quantidade valida.")
-        if quantidade_int < 1:
-            raise forms.ValidationError("A quantidade deve ser pelo menos 1.")
-        return quantidade_int
+    def clean_marca(self):
+        marca = (self.cleaned_data.get("marca") or "").strip()
+        if not marca:
+            raise forms.ValidationError("Informe a marca da peca.")
+        return marca
 
     def clean(self):
         data = super().clean()

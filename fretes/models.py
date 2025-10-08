@@ -144,6 +144,7 @@ class Garantia(models.Model):
 
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="garantias")
     codigo_peca = models.CharField("Codigo da peca", max_length=80)
+    marca = models.CharField("Marca", max_length=120, default="Nao Informado")
     quantidade = models.PositiveIntegerField("Quantidade", default=1)
     defeito = models.TextField("Defeito")
     numero_lote = models.CharField("Numero do lote", max_length=80, blank=True)
@@ -280,6 +281,7 @@ def _post_save_log(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=PedidoVolume)
 def _post_delete_log(sender, instance, **kwargs):
     _log_model_action(instance, "delete")
+
 
 
 

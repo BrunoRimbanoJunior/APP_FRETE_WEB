@@ -1,4 +1,4 @@
-
+import html
 from decimal import Decimal
 from io import BytesIO
 from django.http import HttpResponse
@@ -176,7 +176,7 @@ def exportar_fretes_excel(queryset):
     ws.title = "Fretes"
 
     headers = ["Data", "Pedido", "Nota", "Valor Nota", "KG Nota", "Transportadora",
-               "m³", "Peso Cúbico", "Peso Usado", "Total (R$)"]
+               "m3", "Peso Cubico", "Peso Usado", "Total (R$)"]
     ws.append(headers)
 
     for row in _rows_from_queryset(queryset):
@@ -197,7 +197,7 @@ def exportar_fretes_pdf(queryset):
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
 
     headers = ["Data", "Pedido", "Nota", "Valor Nota", "KG Nota", "Transportadora",
-               "m³", "Peso Cúbico", "Peso Usado", "Total (R$)"]
+               "m3", "Peso Cubico", "Peso Usado", "Total (R$)"]
     data = [headers] + _rows_from_queryset(queryset)
 
     table = Table(data, repeatRows=1)
@@ -213,7 +213,7 @@ def exportar_fretes_pdf(queryset):
     ]))
 
     styles = getSampleStyleSheet()
-    story = [Paragraph("Relatório de Fretes", styles["Title"]), Spacer(1, 8), table]
+    story = [Paragraph("Relatorio de Fretes", styles["Title"]), Spacer(1, 8), table]
     doc.build(story)
 
     pdf = buf.getvalue()
@@ -232,11 +232,12 @@ def _garantias_rows(queryset):
             getattr(g.cliente, "nome", ""),
             getattr(g.cliente, "cnpj", ""),
             g.codigo_peca,
+            getattr(g, "marca", "Nao Informado") or "Nao Informado",
             g.defeito,
             g.numero_lote or "",
             g.nota_recebida,
             g.valor,
-            ("Sim" if getattr(g, "mao_de_obra", False) else "Não"),
+            ("Sim" if getattr(g, "mao_de_obra", False) else "Nao"),
             getattr(g, "valor_mao_de_obra", 0) or 0,
             g.data_recebimento.strftime("%d/%m/%Y") if g.data_recebimento else "",
             g.nota_retorno or "",
@@ -252,8 +253,8 @@ def exportar_garantias_excel(queryset):
     ws.title = "Garantias"
 
     headers = [
-        "ID", "Cliente", "CNPJ", "Cód. Peça", "Defeito", "Lote",
-        "Nota Recebida", "Valor", "Mão de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
+        "ID", "Cliente", "CNPJ", "Cod. Peca", "Marca", "Defeito", "Lote",
+        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
     ]
     ws.append(headers)
     for row in _garantias_rows(queryset):
@@ -272,43 +273,105 @@ def exportar_garantias_excel(queryset):
 
 def exportar_garantias_pdf(queryset):
     buf = BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=landscape(A4),
+        leftMargin=20,
+        rightMargin=20,
+        topMargin=20,
+        bottomMargin=20,
+    )
 
     headers = [
-        "ID", "Cliente", "CNPJ", "Cód. Peça", "Defeito", "Lote",
-        "Nota Recebida", "Valor", "Mão de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
+        "ID", "Cliente", "CNPJ", "Cod. Peca", "Marca", "Defeito", "Lote",
+        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
     ]
     rows = _garantias_rows(queryset)
-    # Totais (colunas índice 7=Valor, 9=Valor M.O.)
-    total_valor = sum((r[7] or 0) for r in rows)
-    total_mo = sum((r[9] or 0) for r in rows)
+
+    total_valor = sum((r[8] or 0) for r in rows)
+    total_mo = sum((r[10] or 0) for r in rows)
 
     totals_row = [""] * len(headers)
-    totals_row[6] = "Totais"
-    totals_row[7] = total_valor
-    totals_row[9] = total_mo
+    totals_row[7] = "Totais"
+    totals_row[8] = total_valor
+    totals_row[10] = total_mo
 
-    data = [headers] + rows + [totals_row]
-
-    table = Table(data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-        ("GRID", (0,0), (-1,-1), 0.3, colors.grey),
-        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-        ("ALIGN", (0,0), (-1,-1), "LEFT"),
-        ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.whitesmoke, colors.white]),
-        ("FONTSIZE", (0,0), (-1,-1), 9),
-        ("LEFTPADDING", (0,0), (-1,-1), 4),
-        ("RIGHTPADDING", (0,0), (-1,-1), 4),
-        # Destaque da linha de totais (última linha)
-        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor('#eef2f7')),
-        ("ALIGN", (7, -1), (7, -1), "RIGHT"),
-        ("ALIGN", (9, -1), (9, -1), "RIGHT"),
-    ]))
+    data_rows = rows + [totals_row]
 
     styles = getSampleStyleSheet()
-    story = [Paragraph("Relatório de Garantias", styles["Title"]), Spacer(1, 8), table]
+    small_left = styles['BodyText'].clone('SmallLeft')
+    small_left.fontSize = 8
+    small_left.leading = 9
+    small_left.spaceAfter = 0
+
+    small_center = small_left.clone('SmallCenter')
+    small_center.alignment = 1
+
+    small_right = small_left.clone('SmallRight')
+    small_right.alignment = 2
+
+    table_data = [headers]
+    for row in data_rows:
+        id_value = Paragraph(html.escape(str(row[0])), small_center)
+        cliente = Paragraph(html.escape(str(row[1])), small_left)
+        cnpj = Paragraph(html.escape(str(row[2])), small_left)
+        codigo = Paragraph(html.escape(str(row[3])), small_left)
+        marca = Paragraph(html.escape(str(row[4])), small_left)
+        defeito = Paragraph(html.escape(str(row[5])), small_left)
+        lote = Paragraph(html.escape(str(row[6] or "")), small_center)
+        nota_recebida = Paragraph(html.escape(str(row[7] or "")), small_center)
+        valor = row[8] if row[8] not in (None, "") else 0
+        valor_fmt = f"{float(valor):.2f}" if isinstance(valor, (int, float, Decimal)) else str(valor)
+        valor_cell = Paragraph(html.escape(valor_fmt), small_right)
+        mao = Paragraph(html.escape(str(row[9])), small_center)
+        valor_mo = row[10] if row[10] not in (None, "") else 0
+        valor_mo_fmt = f"{float(valor_mo):.2f}" if isinstance(valor_mo, (int, float, Decimal)) else str(valor_mo)
+        valor_mo_cell = Paragraph(html.escape(valor_mo_fmt), small_right)
+        recebido_em = Paragraph(html.escape(str(row[11] or "")), small_center)
+        nota_retorno = Paragraph(html.escape(str(row[12] or "")), small_left)
+        retorno_em = Paragraph(html.escape(str(row[13] or "")), small_center)
+        status = Paragraph(html.escape(str(row[14])), small_center)
+
+        table_data.append([
+            id_value,
+            cliente,
+            cnpj,
+            codigo,
+            marca,
+            defeito,
+            lote,
+            nota_recebida,
+            valor_cell,
+            mao,
+            valor_mo_cell,
+            recebido_em,
+            nota_retorno,
+            retorno_em,
+            status,
+        ])
+
+    ratios = [0.04, 0.13, 0.09, 0.06, 0.07, 0.11, 0.05, 0.06, 0.05, 0.05, 0.05, 0.06, 0.06, 0.06, 0.06]
+    available_width = doc.width
+    col_widths = [available_width * r for r in ratios]
+
+    table = Table(table_data, repeatRows=1, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+        ("ALIGN", (8, 1), (8, -2), "RIGHT"),
+        ("ALIGN", (10, 1), (10, -2), "RIGHT"),
+        ("ALIGN", (8, -1), (10, -1), "RIGHT"),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor('#eef2f7')),
+    ]))
+
+    story = [Paragraph("Relatorio de Garantias", styles["Title"]), Spacer(1, 8), table]
     doc.build(story)
 
     pdf = buf.getvalue()

@@ -1,7 +1,8 @@
-﻿{% extends "fretes/base.html" %}
+{% extends "fretes/base.html" %}
 {% block title %}Garantias{% endblock %}
 {% block content %}
-<div class="container garantias-wrapper">\n  <style>
+<div class="container garantias-wrapper">
+  <style>
     .garantias-wrapper .table {
       font-size: 0.9rem;
     }
@@ -44,8 +45,8 @@
   <form method="get" class="mb-3">
     <div class="row gy-2 gx-2 align-items-end">
       <div class="col-12 col-sm-6 col-md-3">
-        <label for="id_nota" class="form-label">Nº Nota (recebida/retorno)</label>
-        <input type="text" name="nota" id="id_nota" value="{{ nota }}" class="form-control" placeholder="Nº Nota">
+        <label for="id_nota" class="form-label">Numero Nota (recebida/retorno)</label>
+        <input type="text" name="nota" id="id_nota" value="{{ nota }}" class="form-control" placeholder="Numero Nota">
       </div>
       <div class="col-12 col-sm-6 col-md-3">
         <label for="id_cnpj_f" class="form-label">CNPJ</label>
@@ -91,7 +92,8 @@
         <tr>
           <th>ID</th>
           <th>Cliente</th>
-          <th>Cad. Peças</th>
+          <th>Cod. Peca</th>
+          <th>Marca</th>
           <th>Nota Recebida</th>
           <th>Valor</th>
           <th>Recebido em</th>
@@ -107,6 +109,7 @@
             <td>{{ g.id }}</td>
             <td class="cliente-col">{{ g.cliente.nome }} ({{ g.cliente.cnpj }})</td>
             <td>{{ g.codigo_peca }}</td>
+            <td>{{ g.marca|default:"Nao Informado" }}</td>
             <td>{{ g.nota_recebida }}</td>
             <td>{{ g.valor }}</td>
             <td>{{ g.data_recebimento }}</td>
@@ -122,13 +125,10 @@
             <td><a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:garantia_update' g.id %}">Editar</a></td>
           </tr>
         {% empty %}
-          <tr><td colspan="10" class="text-center">Sem registros.</td></tr>
+          <tr><td colspan="11" class="text-center">Sem registros.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 {% endblock %}
-
-
-

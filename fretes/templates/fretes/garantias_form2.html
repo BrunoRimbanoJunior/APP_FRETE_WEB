@@ -1,4 +1,4 @@
-﻿{% extends "fretes/base.html" %}
+{% extends "fretes/base.html" %}
 {% block title %}{% if is_new %}Nova{% else %}Editar{% endif %} Garantia{% endblock %}
 {% block content %}
 <div class="container" style="max-width: 800px;">
@@ -42,7 +42,7 @@
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar produto</label>
       <div class="col-sm-9 d-flex gap-2">
-        <input type="text" id="produto-search" name="q" class="form-control" placeholder="Código ou descrição">
+        <input type="text" id="produto-search" name="q" class="form-control" placeholder="Codigo ou descricao">
         <button type="button"
                 class="btn btn-outline-secondary"
                 hx-get="{% url 'fretes:produtos_options' %}"
@@ -62,8 +62,8 @@
       </div>
     </div>
     <div class="row mb-3">
-      <label class="col-sm-3 col-form-label">{{ form.quantidade.label }}</label>
-      <div class="col-sm-9">{{ form.quantidade }}{% if form.quantidade.errors %}<div class="text-danger small">{{ form.quantidade.errors|join:', ' }}</div>{% endif %}</div>
+      <label class="col-sm-3 col-form-label">{{ form.marca.label }}</label>
+      <div class="col-sm-9">{{ form.marca }}{% if form.marca.errors %}<div class="text-danger small">{{ form.marca.errors|join:", " }}</div>{% endif %}</div>
     </div>
 
     <div class="row mb-3">
@@ -86,7 +86,7 @@
       <div class="col-sm-9">
         <div class="form-check">
           {{ form.mao_de_obra }}
-          <label class="form-check-label" for="id_mao_de_obra">Marcar se há mão de obra</label>
+          <label class="form-check-label" for="id_mao_de_obra">Marcar se ha mao de obra</label>
         </div>
       </div>
     </div>
@@ -125,5 +125,3 @@
     document.addEventListener('DOMContentLoaded', toggleMao);
   })();
  </script>
-
-

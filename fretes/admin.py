@@ -52,8 +52,8 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Garantia)
 class GarantiaAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "codigo_peca", "nota_recebida", "nota_retorno", "data_recebimento", "data_retorno", "valor")
-    search_fields = ("codigo_peca", "nota_recebida", "nota_retorno", "cliente__nome", "cliente__cnpj")
+    list_display = ("id", "cliente", "codigo_peca", "marca", "nota_recebida", "nota_retorno", "data_recebimento", "data_retorno", "valor")
+    search_fields = ("codigo_peca", "marca", "nota_recebida", "nota_retorno", "cliente__nome", "cliente__cnpj")
     list_filter = ("data_recebimento", "data_retorno")
 
 

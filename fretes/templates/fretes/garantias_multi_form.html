@@ -73,8 +73,8 @@
           </div>
         </div>
         <div class="row mb-2">
-          <label class="col-sm-3 col-form-label">Quantidade</label>
-          <div class="col-sm-9"><input type="number" min="1" value="1" id="id_item_quantidade" class="form-control"></div>
+          <label class="col-sm-3 col-form-label">Marca</label>
+          <div class="col-sm-9"><input type="text" id="id_item_marca" class="form-control" placeholder="Marca da peca"></div>
         </div>
 
         <div class="row mb-2">
@@ -138,7 +138,7 @@
         <thead>
           <tr>
             <th>Produto</th>
-            <th>Qtd</th>         
+            <th>Marca</th>         
             <th>Defeito</th>
             <th>Valor</th>
             <th>Mao de obra</th>
@@ -164,6 +164,3 @@
 
 <script src="{% static 'fretes/js/garantias_multi_form.js' %}" defer></script>
 {% endblock %}
-
-
-
