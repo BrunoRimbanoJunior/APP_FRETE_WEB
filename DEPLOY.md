@@ -1,23 +1,24 @@
-Deploy em Produção (Docker Compose + Portainer)
+﻿Deploy em ProduÃ§Ã£o (Docker Compose + Portainer)
 
-Este guia descreve o fluxo recomendado para publicar novas versões em produção, incluindo backup do banco, validações e rollback.
+Este guia descreve o fluxo recomendado para publicar novas versÃµes em produÃ§Ã£o, incluindo backup do banco, validaÃ§Ãµes e rollback.
 
-1) Visão Geral
+1) VisÃ£o Geral
 - App: Django + Gunicorn
 - Banco: Postgres
-- Orquestração: deploy/docker-compose.prod.yml
+- OrquestraÃ§Ã£o: deploy/docker-compose.prod.yml
 - Imagens: publicadas via GitHub Actions em ghcr.io/<org>/app_frete_web:<tag>
 
-2) Pré‑requisitos
-- Acesso ao host/Portainer onde roda o stack de produção
-- Variáveis de ambiente definidas (no Portainer/stack ou .env.prod):
+2) PrÃ©â€‘requisitos
+- Acesso ao host/Portainer onde roda o stack de produÃ§Ã£o
+- VariÃ¡veis de ambiente definidas (no Portainer/stack ou .env.prod):
   - POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT
   - DJANGO_SECRET_KEY, DJANGO_DEBUG=0, DJANGO_SETTINGS_MODULE=fretes_web.settings.prod
   - DJANGO_CSRF_TRUSTED_ORIGINS e/ou CSRF_TRUSTED_ORIGINS
-- Serviço web do compose de prod usa comando que executa migrate e collectstatic antes do Gunicorn
+  - TZ (ex.: America/Sao_Paulo — usado pelo auto-backup)
+- ServiÃ§o web do compose de prod usa comando que executa migrate e collectstatic antes do Gunicorn
 
 3) Versionamento da Imagem
-Evite latest em produção. Prefira tags versionadas (ex.: vYYYY-MM-DD-n). Altere a linha image: do serviço web no deploy/docker-compose.prod.yml para a tag desejada.
+Evite latest em produÃ§Ã£o. Prefira tags versionadas (ex.: vYYYY-MM-DD-n). Altere a linha image: do serviÃ§o web no deploy/docker-compose.prod.yml para a tag desejada.
 
 4) Backup do Banco (antes do deploy)
 Crie um dump dentro do container do Postgres:
@@ -29,15 +30,15 @@ Opcional: copie o arquivo do container para o host (troque <db-container> pelo n
 docker cp <db-container>:/var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump ./backup_YYYY-MM-DD_HHMM.dump
 
 4.1) Verificar o Backup
-- Listar conteúdo do arquivo (sem restaurar):
+- Listar conteÃºdo do arquivo (sem restaurar):
 
 docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -l /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump | head -n 40'
 
-- Teste de integridade (dry‑run de catálogo):
+- Teste de integridade (dryâ€‘run de catÃ¡logo):
 
 docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -l /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump > /dev/null'
 
-- Restauração em um banco temporário e checagem:
+- RestauraÃ§Ã£o em um banco temporÃ¡rio e checagem:
 
 createdb -U "$POSTGRES_USER" tmp_restore
 pg_restore -U "$POSTGRES_USER" -d tmp_restore -c /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump
@@ -45,8 +46,8 @@ psql -U "$POSTGRES_USER" -d tmp_restore -c "\\dt"
 psql -U "$POSTGRES_USER" -d tmp_restore -c "select count(*) from django_migrations;"
 dropdb -U "$POSTGRES_USER" tmp_restore
 
-5) Validar Migrações (opcional)
-Listar migrações reconhecidas pela aplicação:
+5) Validar MigraÃ§Ãµes (opcional)
+Listar migraÃ§Ãµes reconhecidas pela aplicaÃ§Ã£o:
 
 docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py showmigrations
 
@@ -63,14 +64,14 @@ docker compose -f deploy/docker-compose.prod.yml pull web
 
 docker compose -f deploy/docker-compose.prod.yml up -d web
 
-- Acompanhar logs e aguardar “Starting gunicorn …”:
+- Acompanhar logs e aguardar o Gunicorn subir:
 
 docker compose -f deploy/docker-compose.prod.yml logs -f web
 
-7) Smoke Test Pós‑Deploy
-- /fretes/ – home
-- /fretes/pedidos/ – listar e filtrar
-- /fretes/garantias/ – filtros e exportações (PDF/Excel)
+7) Smoke Test PÃ³sâ€‘Deploy
+- /fretes/ â€“ home
+- /fretes/pedidos/ â€“ listar e filtrar
+- /fretes/garantias/ â€“ filtros e exportaÃ§Ãµes (PDF/Excel)
 - (se staff) /fretes/admin/tools/importar-produtos/ e /fretes/admin/tools/importar-clientes/
 
 8) Rollback
@@ -82,16 +83,73 @@ docker compose -f deploy/docker-compose.prod.yml pull web && docker compose -f d
 
 docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump'
 
-9) Dicas e Solução de Problemas
-- 502/Bad Gateway logo após o deploy geralmente é o web subindo; aguarde alguns segundos.
+9) Dicas e SoluÃ§Ã£o de Problemas
+- 502/Bad Gateway logo apÃ³s o deploy geralmente Ã© o web subindo; aguarde alguns segundos.
 - Verifique db (health=healthy) e logs do web.
-- Problemas de sessão/CSRF em HTTPS: alinhe DJANGO_CSRF_TRUSTED_ORIGINS/CSRF_TRUSTED_ORIGINS e flags de cookies.
-- Em caso de erro em migração, rode manualmente para ver a mensagem completa:
+- Problemas de sessÃ£o/CSRF em HTTPS: alinhe DJANGO_CSRF_TRUSTED_ORIGINS/CSRF_TRUSTED_ORIGINS e flags de cookies.
+- Em caso de erro em migraÃ§Ã£o, rode manualmente para ver a mensagem completa:
 
 docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py migrate --noinput -v 3
 
 10) Pipeline CI/CD
 - Cada push na branch configurada dispara o workflow (.github/workflows/ci-cd.yml).
-- Verifique no GitHub Actions se a imagem foi construída e publicada.
-- Use a tag gerada no deploy/docker-compose.prod.yml (ou mantenha latest se preferir, embora não recomendado).
+- Verifique no GitHub Actions se a imagem foi construÃ­da e publicada.
+- Use a tag gerada no deploy/docker-compose.prod.yml (ou mantenha latest se preferir, embora nÃ£o recomendado).
 
+
+
+
+11) Auto-backup em Produção
+- O serviço `auto-backup` está no compose de prod e:
+  - Executa `pg_dump` às 04:00 e 16:00 (fuso `TZ`).
+  - Salva em `/backups` no volume nomeado `pgbackups`.
+  - Remove dumps com mais de 7 dias.
+
+- Checar logs:
+
+  docker compose -f deploy/docker-compose.prod.yml logs -f auto-backup
+
+- Listar dumps:
+
+  docker compose -f deploy/docker-compose.prod.yml exec auto-backup sh -lc 'ls -lh /backups | tail -n +1'
+
+- Restaurar o último dump (sem prompt de senha):
+
+  docker compose -f deploy/docker-compose.prod.yml exec auto-backup sh -lc 'set -e; export PGPASSWORD="$POSTGRES_PASSWORD"; LATEST=$(ls -1t /backups/*.dump | head -n1); echo "Restaurando: $LATEST"; dropdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" --force --if-exists "$POSTGRES_DB"; createdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" "$POSTGRES_DB"; pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --clean --if-exists "$LATEST"'
+
+- Para manter cópias no host, mapeie `pgbackups` para um caminho do host via Portainer/bind, conforme sua política de retenção.
+
+
+12) Restauração rápida pelo container do DB
+- O serviço `db` monta:
+  - `pgbackups` em `/backups` (somente leitura)
+  - script `/usr/local/bin/backup_restore.sh`
+
+- Restaurar o dump mais recente (com drop e recreate):
+
+  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh'
+
+- Restaurar um arquivo específico:
+
+  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
+
+- Restaurar sem dropar o banco antes:
+
+  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh --no-drop'
+
+12) Restauração rápida pelo container do DB (alternativas)
+- Usar o container do DB (exec):
+
+  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh'
+
+- Usar um cliente efêmero (run dbtools):
+  (instala client e executa o script contra o serviço `db` pela rede Compose)
+
+  docker compose -f deploy/docker-compose.prod.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh'
+
+- Restaurar arquivo específico:
+
+  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
+
+  # ou com dbtools efêmero
+  docker compose -f deploy/docker-compose.prod.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'

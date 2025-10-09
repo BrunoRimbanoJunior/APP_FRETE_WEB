@@ -1,0 +1,88 @@
+﻿
+services:
+  db:
+    image: postgres:16-alpine
+    env_file:
+      - .env.dev
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Use $$ para NÃƒO expandir no parse do compose; expande dentro do container
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.dev
+    environment:
+      DJANGO_SETTINGS_MODULE: fretes_web.settings.dev
+      # Opcional: sobrescrever workers/timeouts em dev
+      GUNICORN_WORKERS: "2"
+      GUNICORN_TIMEOUT: "60"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # sobe gunicorn em 8000 (ver entrypoint)
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    expose:
+      - "8000"
+    restart: unless-stopped
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  auto-backup:
+      image: alpine:latest 
+      container_name: auto_backup
+      restart: always
+      volumes:
+        - app_frete_pgdata:/export
+      env_file:
+      - .env.dev
+      command: >
+        sh -c "
+          # Instala as ferramentas necessÃ¡rias (cliente postgres e o cron)
+          apk add --no-cache postgresql-client dcron
+  
+          # Cria o script que farÃ¡ o backup
+          echo '#!/bin/sh' > /usr/local/bin/backup.sh
+          echo 'echo \"[\$(date)] - Iniciando o backup...\"' >> /usr/local/bin/backup.sh
+          echo 'DUMP_FILE=/backups/backup_fretes_db_\$(date +\"%Y-%m-%d_%H-%M\").dump' >> /usr/local/bin/backup.sh
+          echo \"PGPASSWORD='\$POSTGRES_PASSWORD' pg_dump -h '\$POSTGRES_HOST' -U '\$POSTGRES_USER' -d '\$POSTGRES_DB' --format=c --compress=9 > \\\"\$DUMP_FILE\\\"\" >> /usr/local/bin/backup.sh
+          echo 'echo \"[\$(date)] - Backup concluÃ­do: \$DUMP_FILE\"' >> /usr/local/bin/backup.sh
+          
+          # Cria o script para limpar backups antigos (mais de 7 dias)
+          echo 'echo \"[\$(date)] - Limpando backups antigos...\"' >> /usr/local/bin/backup.sh
+          echo \"find /backups -name '*.dump' -mtime +7 -delete\" >> /usr/local/bin/backup.sh
+          echo 'echo \"[\$(date)] - Limpeza concluÃ­da.\"' >> /usr/local/bin/backup.sh
+  
+          # DÃ¡ permissÃ£o de execuÃ§Ã£o ao script
+          chmod +x /usr/local/bin/backup.sh
+  
+          # Configura o CRON para rodar o script Ã s 4h e 16h
+          echo '0 4,16 * * * /usr/local/bin/backup.sh >> /proc/1/fd/1 2>&1' > /etc/crontabs/root
+  
+          # Inicia o serviÃ§o do CRON em background e executa um backup imediato na primeira vez
+          echo 'Executando backup inicial...'
+          /usr/local/bin/backup.sh
+          echo 'Iniciando o agendador de backups (cron)...'
+          exec crond -f -l 8
+        "
+volumes:
+  pgdata:

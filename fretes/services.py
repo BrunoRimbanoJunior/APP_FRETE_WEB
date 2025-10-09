@@ -26,12 +26,20 @@ def calcular_frete(pedido, carrier, kg_nota: Decimal, valor_nota: Decimal | None
     if valor_nota and tab.frete_valor_perc:
         adicional_valor = (Decimal(valor_nota) * tab.frete_valor_perc) / Decimal(100)
 
+    # GRIS (% sobre o valor da nota)
+    gris_valor = Decimal("0")
+    if valor_nota and getattr(tab, "gris_perc", Decimal("0")):
+        gris_valor = (Decimal(valor_nota) * Decimal(tab.gris_perc)) / Decimal(100)
+
     # 💡 Lógica corrigida para o pedágio
     pedagio = Decimal("0")
     if tab.pedagio:
         pedagio = (peso_usado / Decimal(100)) * tab.pedagio
 
-    total = max(base, tab.frete_minimo) + pedagio + adicional_valor
+    # Valor de despacho é fixo por nota
+    valor_despacho = Decimal(getattr(tab, "valor_despacho", 0) or 0)
+
+    total = max(base, tab.frete_minimo) + pedagio + adicional_valor + gris_valor + valor_despacho
     total = Decimal(total).quantize(Decimal("0.01"))
 
     return {

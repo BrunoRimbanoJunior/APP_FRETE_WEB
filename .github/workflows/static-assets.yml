@@ -1,0 +1,45 @@
+name: Lint Static Assets
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+
+jobs:
+  check-static-casing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail on uppercase image extensions in static/
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+
+          # List files tracked by git under static/
+          mapfile -t files < <(git ls-files 'static/**' 2>/dev/null || true)
+
+          # Rule 1: forbid uppercase extensions for common image types
+          bad_ext=$(printf '%s\n' "${files[@]}" | grep -E '\\.(PNG|JPG|JPEG|GIF|SVG|WEBP)$' || true)
+          if [[ -n "$bad_ext" ]]; then
+            echo 'Found images with uppercase extensions (use lowercase like .png, .jpg, .svg):'
+            echo "$bad_ext" | sed 's/^/  - /'
+            exit 1
+          fi
+
+          # Rule 2: prevent case-collision duplicates (same name differing only by case)
+          if [[ ${#files[@]} -gt 0 ]]; then
+            lower_sorted=$(printf '%s\n' "${files[@]}" | awk '{print tolower($0)}' | sort)
+            dups=$(printf '%s\n' "$lower_sorted" | uniq -d || true)
+            if [[ -n "$dups" ]]; then
+              echo 'Detected duplicate static assets that differ only by case:'
+              echo "$dups" | sed 's/^/  - /'
+              echo 'Please keep a single lowercase-named file.'
+              exit 1
+            fi
+          fi
+
+          echo 'Static assets casing looks good.'
+

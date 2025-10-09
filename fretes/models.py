@@ -31,6 +31,8 @@ class FreightTable(models.Model):
     frete_minimo = models.DecimalField("Frete Minimo", max_digits=10, decimal_places=2, default=0)
     pedagio = models.DecimalField("Pedagio", max_digits=10, decimal_places=2, default=0)
     frete_valor_perc = models.DecimalField("Frete Valor %", max_digits=6, decimal_places=3, default=0)
+    valor_despacho = models.DecimalField("Valor de despacho", max_digits=10, decimal_places=2, default=0)
+    gris_perc = models.DecimalField("GRIS %", max_digits=6, decimal_places=3, default=0)
     fator_peso_cubico = models.DecimalField("Fator Peso Cubico", max_digits=10, decimal_places=2, default=230)
 
     class Meta:

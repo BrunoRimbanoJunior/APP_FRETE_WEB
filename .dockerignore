@@ -9,3 +9,4 @@ __pycache__
 .vscode
 Dockerfile*
 docker-compose*.yml
+backups/

@@ -5,7 +5,6 @@ from django.conf import settings
 def seed_groups(apps, schema_editor):
     Group = apps.get_model('auth', 'Group')
     Permission = apps.get_model('auth', 'Permission')
-    ContentType = apps.get_model('contenttypes', 'ContentType')
 
     def perm(codename):
         try:
@@ -13,18 +12,8 @@ def seed_groups(apps, schema_editor):
         except Permission.DoesNotExist:
             return None
 
-    def ctype(model):
-        return ContentType.objects.get(app_label='fretes', model=model)
-
-    # Model permissions
-    models_ct = {
-        'pedido': ctype('pedido'),
-        'pedidovolume': ctype('pedidovolume'),
-        'produto': ctype('produto'),
-        'cliente': ctype('cliente'),
-        'garantia': ctype('garantia'),
-        'fretecalculado': ctype('fretecalculado'),
-    }
+    # Nota: Evitamos acessar ContentType diretamente aqui para não depender
+    # do timing do post_migrate que cria os content types/permissões.
 
     def mp(model, kind):
         return perm(f"{kind}_{model}")
@@ -78,8 +67,8 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('fretes', '0004_garantia_mao_de_obra'),
-        ('auth', '__latest__'),
-        ('contenttypes', '__latest__'),
+        ('auth', '0012_alter_user_first_name_max_length'),
+        ('contenttypes', '0002_remove_content_type_name'),
     ]
 
     operations = [
@@ -110,4 +99,3 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(seed_groups, migrations.RunPython.noop),
     ]
-

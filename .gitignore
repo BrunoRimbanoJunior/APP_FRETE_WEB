@@ -32,3 +32,5 @@ deploy/.env.prod
 .vscode/
 # Docker
 *.log
+# Backups gerados pelo serviço
+backups/

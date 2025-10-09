@@ -14,6 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 COPY docker/entrypoint.sh /entrypoint.sh
+# Normaliza nome da logo para minúsculo (evita .PNG em produção)
+RUN sh -lc 'set -e; d=/app/static/img; if [ -d "$d" ]; then if [ -f "$d/logo.PNG" ] && [ ! -f "$d/logo.png" ]; then mv "$d/logo.PNG" "$d/logo.png"; fi; fi'
 # Normaliza fim de linha (CRLF -> LF) para evitar erro no Windows
 RUN dos2unix /entrypoint.sh && chmod +x /entrypoint.sh
 
