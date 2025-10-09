@@ -33,6 +33,11 @@ services:
       GUNICORN_TIMEOUT: "60"
     depends_on:
       - db
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     expose:
       - "8000"
     command: >
@@ -49,7 +54,8 @@ services:
       dockerfile: nginx/Dockerfile
     ports:
       - "8082:80"              # publica no host
-    depends_on: [ web ]
+    depends_on:
+      - web
     restart: unless-stopped
 
   auto-backup:
