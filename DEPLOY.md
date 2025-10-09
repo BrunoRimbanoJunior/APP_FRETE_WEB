@@ -55,12 +55,20 @@ Ver o plano (Django 5.0+):
 
 docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py migrate --plan
 
-6) Atualizar Imagem e Aplicar Deploy
+6) Atualizar Imagem e Aplicar Deploy (otimizado)
 - Baixar a nova imagem:
 
 docker compose -f deploy/docker-compose.prod.yml pull web
 
-- Subir somente o web (recria com a nova imagem):
+- Rodar migrações (one‑off):
+
+docker compose -f deploy/docker-compose.prod.yml run --rm --profile ops migrate
+
+- Coletar estáticos (one‑off):
+
+docker compose -f deploy/docker-compose.prod.yml run --rm --profile ops collectstatic
+
+- Subir somente o web (inicia direto o Gunicorn):
 
 docker compose -f deploy/docker-compose.prod.yml up -d web
 
