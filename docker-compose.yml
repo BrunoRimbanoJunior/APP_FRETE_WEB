@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: postgres:16-alpine
     env_file:
@@ -31,7 +31,7 @@ services:
         condition: service_healthy
     healthcheck:
       # sobe gunicorn em 8000 (ver entrypoint)
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/ >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -68,7 +68,7 @@ services:
         # Instala cliente Postgres (mesma major do servidor) e timezone
         apk add --no-cache postgresql$${PG_CLIENT_MAJOR}-client tzdata && 
 
-        # Garante diretório de backups
+        # Garante diretÃ³rio de backups
         mkdir -p /backups && 
 
         # Copia o script versionado e normaliza EOL (CRLF -> LF)
@@ -100,3 +100,4 @@ services:
 
 volumes:
   pgdata:
+
