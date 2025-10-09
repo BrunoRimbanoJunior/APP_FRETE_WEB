@@ -74,7 +74,7 @@ services:
       TZ: ${TZ:-America/Sao_Paulo}
     volumes:
       - pgbackups:/backups
-      - ./deploy/auto-backup:/opt/auto-backup:ro
+      - ./auto-backup:/opt/auto-backup:ro
     command: >
       sh -c "
         apk add --no-cache postgresql$${PG_CLIENT_MAJOR}-client tzdata && 
