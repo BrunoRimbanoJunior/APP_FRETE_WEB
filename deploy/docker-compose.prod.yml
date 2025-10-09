@@ -74,19 +74,13 @@ services:
       TZ: ${TZ:-America/Sao_Paulo}
     volumes:
       - pgbackups:/backups
+      - ./deploy/auto-backup:/opt/auto-backup:ro
     command: >
       sh -c "
         apk add --no-cache postgresql$${PG_CLIENT_MAJOR}-client tzdata && 
         mkdir -p /backups && 
-        printf '%s\n' \
-          '#!/bin/sh' \
-          'set -e' \
-          'echo "[ $$(date) ] - Iniciando o backup..."' \
-          'DUMP_FILE=/backups/backup_fretes_db_$$(date +"%Y-%m-%d_%H-%M").dump' \
-          'PGPASSWORD="$$POSTGRES_PASSWORD" pg_dump -h "$$POSTGRES_HOST" -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" --format=c --compress=9 > "$$DUMP_FILE"' \
-          'echo "[ $$(date) ] - Backup concluido: $$DUMP_FILE"' \
-          'find /backups -name \*.dump -mtime +7 -delete' \
-          > /usr/local/bin/backup.sh && 
+        cp /opt/auto-backup/backup.sh /usr/local/bin/backup.sh && 
+        sed -i 's/\r$//' /usr/local/bin/backup.sh && 
         chmod +x /usr/local/bin/backup.sh && 
         echo '0 4,16 * * * /usr/local/bin/backup.sh >> /proc/1/fd/1 2>&1' > /etc/crontabs/root && 
         echo 'Aguardando banco ficar pronto...' && 
