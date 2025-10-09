@@ -14,6 +14,7 @@ services:
 
   web:
     image: ghcr.io/brunorimbanojunior/app_frete_web:latest
+    pull_policy: always
 
     environment:
       DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
