@@ -1,0 +1,68 @@
+services:
+  auto-backup:
+    image: alpine:latest
+    container_name: auto_backup
+    restart: unless-stopped
+    environment:
+      PG_CLIENT_MAJOR: ${PG_CLIENT_MAJOR:-16}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      TZ: ${TZ:-America/Sao_Paulo}
+    volumes:
+      - pgbackups:/backups
+    networks:
+      - app_frete_net
+    command: >
+      sh -c '
+        set -e
+        apk add --no-cache postgresql$${PG_CLIENT_MAJOR}-client tzdata
+        mkdir -p /backups
+        cat > /usr/local/bin/backup.sh << "EOF"
+        #!/bin/sh
+        set -e
+        echo "[ $(date) ] - Iniciando o backup..."
+        DUMP_FILE=/backups/backup_fretes_db_$(date +"%Y-%m-%d_%H-%M").dump
+        PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
+          -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+          --format=c --compress=9 > "$DUMP_FILE"
+        echo "[ $(date) ] - Backup concluido: $DUMP_FILE"
+        find /backups -name "*.dump" -mtime +7 -delete
+        EOF
+        chmod +x /usr/local/bin/backup.sh
+        echo "0 4,16 * * * /usr/local/bin/backup.sh >> /proc/1/fd/1 2>&1" > /etc/crontabs/root
+        echo "Aguardando banco ficar pronto..."
+        until pg_isready -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 3; done
+        /usr/local/bin/backup.sh
+        echo "Iniciando cron..."
+        exec crond -f -l 8
+      '
+
+  dbtools:
+    image: alpine:latest
+    profiles: ["tools"]
+    environment:
+      PG_CLIENT_MAJOR: ${PG_CLIENT_MAJOR:-16}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    volumes:
+      - pgbackups:/backups:ro
+      - ./db-tools/backup_restore.sh:/usr/local/bin/backup_restore.sh:ro
+    networks:
+      - app_frete_net
+
+networks:
+  app_frete_net:
+    external: true
+    name: app_frete_default
+
+volumes:
+  pgbackups:
+    external: true
+    name: app_frete_pgbackups
+

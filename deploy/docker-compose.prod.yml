@@ -1,11 +1,10 @@
 services:
   db:
     image: postgres:16-alpine
-    
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fretes}
       POSTGRES_USER: ${POSTGRES_USER:-fretes}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD} 
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - pgbackups:/backups:ro
@@ -15,12 +14,11 @@ services:
   web:
     image: ghcr.io/brunorimbanojunior/app_frete_web:latest
     pull_policy: always
-
     environment:
       DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
       DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}  # O Portainer vai substituir
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
       DJANGO_DEBUG: ${DJANGO_DEBUG}
       CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-0}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
@@ -54,94 +52,12 @@ services:
       context: .
       dockerfile: nginx/Dockerfile
     ports:
-      - "8082:80"              # publica no host
+      - "8082:80"
     depends_on:
       - web
     restart: unless-stopped
 
-  auto-backup:
-    image: alpine:latest
-    container_name: auto_backup
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      PG_CLIENT_MAJOR: ${PG_CLIENT_MAJOR:-16}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST:-db}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      TZ: ${TZ:-America/Sao_Paulo}
-    volumes:
-      - pgbackups:/backups
-    command: >
-      sh -c '
-        set -e
-        apk add --no-cache postgresql$${PG_CLIENT_MAJOR}-client tzdata
-        mkdir -p /backups
-        cat > /usr/local/bin/backup.sh << "EOF"
-        #!/bin/sh
-        set -e
-        echo "[ $(date) ] - Iniciando o backup..."
-        DUMP_FILE=/backups/backup_fretes_db_$(date +"%Y-%m-%d_%H-%M").dump
-        PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
-          -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-          --format=c --compress=9 > "$DUMP_FILE"
-        echo "[ $(date) ] - Backup concluido: $DUMP_FILE"
-        find /backups -name "*.dump" -mtime +7 -delete
-        EOF
-        chmod +x /usr/local/bin/backup.sh
-        echo "0 4,16 * * * /usr/local/bin/backup.sh >> /proc/1/fd/1 2>&1" > /etc/crontabs/root
-        echo "Aguardando banco ficar pronto..."
-        until pg_isready -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do sleep 3; done
-        /usr/local/bin/backup.sh
-        echo "Iniciando cron..."
-        exec crond -f -l 8
-      '
-  
-  dbtools:
-    image: alpine:latest
-    profiles: ["tools"]
-    environment:
-      PG_CLIENT_MAJOR: ${PG_CLIENT_MAJOR:-16}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST:-db}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-    volumes:
-      - pgbackups:/backups:ro
-      - ./db-tools/backup_restore.sh:/usr/local/bin/backup_restore.sh:ro
-    # Sem comando fixo: usamos `docker compose run --rm dbtools <cmd>`
-
-  migrate:
-    image: ghcr.io/brunorimbanojunior/app_frete_web:latest
-    profiles: ["ops"]
-    environment:
-      DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT}
-    depends_on:
-      - db
-    command: ["python", "manage.py", "migrate", "--noinput"]
-    restart: "no"
-
-  collectstatic:
-    image: ghcr.io/brunorimbanojunior/app_frete_web:latest
-    profiles: ["ops"]
-    environment:
-      DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
-      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
-      DJANGO_DEBUG: ${DJANGO_DEBUG}
-    command: ["python", "manage.py", "collectstatic", "--noinput"]
-    restart: "no"
-
 volumes:
   pgdata:
   pgbackups:
+

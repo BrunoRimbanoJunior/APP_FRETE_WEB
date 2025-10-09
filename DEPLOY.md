@@ -107,25 +107,24 @@ docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py m
 
 
 
-11) Auto-backup em Produção
-- O serviço `auto-backup` está no compose de prod e:
-  - Executa `pg_dump` às 04:00 e 16:00 (fuso `TZ`).
-  - Salva em `/backups` no volume nomeado `pgbackups`.
-  - Remove dumps com mais de 7 dias.
+11) Auto-backup em Produção (stack separada)
+- Agora o backup roda em stack separada (`deploy/docker-compose.backup.yml`) para isolar do app.
 
-- Checar logs:
+- Pré-requisito: rede e volume externos do stack do app (ajuste os nomes se necessário):
+  - Rede: `app_frete_default` (do stack principal)
+  - Volume: `app_frete_pgbackups` (compartilhado entre stacks)
 
-  docker compose -f deploy/docker-compose.prod.yml logs -f auto-backup
+- Subir/atualizar backup (Portainer: criar nova stack apontando para deploy/docker-compose.backup.yml):
+
+  docker compose -f deploy/docker-compose.backup.yml up -d
+
+- Logs do backup:
+
+  docker compose -f deploy/docker-compose.backup.yml logs -f auto-backup
 
 - Listar dumps:
 
-  docker compose -f deploy/docker-compose.prod.yml exec auto-backup sh -lc 'ls -lh /backups | tail -n +1'
-
-- Restaurar o último dump (sem prompt de senha):
-
-  docker compose -f deploy/docker-compose.prod.yml exec auto-backup sh -lc 'set -e; export PGPASSWORD="$POSTGRES_PASSWORD"; LATEST=$(ls -1t /backups/*.dump | head -n1); echo "Restaurando: $LATEST"; dropdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" --force --if-exists "$POSTGRES_DB"; createdb -h "$POSTGRES_HOST" -U "$POSTGRES_USER" "$POSTGRES_DB"; pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --clean --if-exists "$LATEST"'
-
-- Para manter cópias no host, mapeie `pgbackups` para um caminho do host via Portainer/bind, conforme sua política de retenção.
+  docker compose -f deploy/docker-compose.backup.yml exec auto-backup sh -lc 'ls -lh /backups | tail -n +1'
 
 
 12) Restauração rápida pelo container do DB
@@ -145,7 +144,7 @@ docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py m
 
   docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh --no-drop'
 
-12) Restauração rápida pelo container do DB (alternativas)
+13) Restauração rápida pelo container do DB (alternativas)
 - Usar o container do DB (exec):
 
   docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh'
@@ -153,11 +152,11 @@ docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py m
 - Usar um cliente efêmero (run dbtools):
   (instala client e executa o script contra o serviço `db` pela rede Compose)
 
-  docker compose -f deploy/docker-compose.prod.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh'
+  docker compose -f deploy/docker-compose.backup.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh'
 
 - Restaurar arquivo específico:
 
   docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
 
   # ou com dbtools efêmero
-  docker compose -f deploy/docker-compose.prod.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
+  docker compose -f deploy/docker-compose.backup.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
