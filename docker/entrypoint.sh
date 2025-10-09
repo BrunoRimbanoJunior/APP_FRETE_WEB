@@ -38,9 +38,19 @@ except Exception as e:
     raise
 PY
 
-# -------- Django: migrate e collectstatic --------
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+# -------- Django: migrate e collectstatic (podem ser desativados por env) --------
+: "${RUN_MIGRATIONS:=1}"
+: "${RUN_COLLECTSTATIC:=1}"
+if [ "$RUN_MIGRATIONS" = "1" ]; then
+  python manage.py migrate --noinput
+else
+  echo "[entrypoint] RUN_MIGRATIONS=0 — pulando migrate"
+fi
+if [ "$RUN_COLLECTSTATIC" = "1" ]; then
+  python manage.py collectstatic --noinput
+else
+  echo "[entrypoint] RUN_COLLECTSTATIC=0 — pulando collectstatic"
+fi
 
 # -------- Sobe o Gunicorn --------
 exec gunicorn fretes_web.wsgi:application \
