@@ -74,7 +74,10 @@ class PedidoVolume(models.Model):
 
 class FreteCalculado(models.Model):
     data_calculo = models.DateField(auto_now_add=True)
+    # Historico legado: numero_pedido permanece para compatibilidade e auditoria
     numero_pedido = models.CharField(max_length=60)
+    # Novo: permite vincular varios pedidos a um mesmo calculo (nota)
+    pedidos = models.ManyToManyField('Pedido', related_name='fretes', blank=True)
     numero_nota = models.CharField(max_length=60, blank=True)
     valor_nota = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     kg_nota = models.DecimalField(max_digits=12, decimal_places=2)
@@ -83,14 +86,21 @@ class FreteCalculado(models.Model):
     peso_usado = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     frete_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     carrier = models.ForeignKey(Carrier, on_delete=models.CASCADE)
+    # Novo: tipo de frete e autorizacao
+    TIPO_PAGO = 'pago'
+    TIPO_A_PAGAR = 'a_pagar'
+    TIPOS_FRETE = (
+        (TIPO_PAGO, 'Frete Pago'),
+        (TIPO_A_PAGAR, 'Frete a Pagar'),
+    )
+    tipo_frete = models.CharField(max_length=16, choices=TIPOS_FRETE, default=TIPO_PAGO)
+    autorizado_por = models.CharField(max_length=120, blank=True)
 
     class Meta:
         ordering = ["-id"]
         verbose_name = "Frete Calculado"
         verbose_name_plural = "Fretes Calculados"
-        constraints = [
-            models.UniqueConstraint(fields=["numero_pedido", "carrier"], name="uniq_pedido_carrier")
-        ]
+        # Removido constraint antigo de (numero_pedido, carrier) para permitir multi-pedido por nota
 
     def __str__(self) -> str:
         return f"{self.numero_pedido} - {self.carrier} - {self.frete_total}"

@@ -156,10 +156,16 @@ def exportar_produtos_excel(queryset):
 def _rows_from_queryset(queryset):
     rows = []
     for f in queryset:
+        try:
+            pedidos_list = list(f.pedidos.all())
+        except Exception:
+            pedidos_list = []
+        pedidos_str = ", ".join(str(p) for p in pedidos_list) if pedidos_list else (f.numero_pedido or "")
         rows.append([
             f.data_calculo.strftime("%d/%m/%Y") if f.data_calculo else "",
-            f.numero_pedido,
+            pedidos_str,
             f.numero_nota or "",
+            getattr(f, 'get_tipo_frete_display', lambda: getattr(f, 'tipo_frete', ''))(),
             f.valor_nota or 0,
             f.kg_nota,
             str(f.carrier),
@@ -175,7 +181,7 @@ def exportar_fretes_excel(queryset):
     ws = wb.active
     ws.title = "Fretes"
 
-    headers = ["Data", "Pedido", "Nota", "Valor Nota", "KG Nota", "Transportadora",
+    headers = ["Data", "Pedidos", "Nota", "Tipo Frete", "Valor Nota", "KG Nota", "Transportadora",
                "m3", "Peso Cubico", "Peso Usado", "Total (R$)"]
     ws.append(headers)
 
@@ -196,7 +202,7 @@ def exportar_fretes_pdf(queryset):
     buf = BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=landscape(A4), leftMargin=20, rightMargin=20, topMargin=20, bottomMargin=20)
 
-    headers = ["Data", "Pedido", "Nota", "Valor Nota", "KG Nota", "Transportadora",
+    headers = ["Data", "Pedidos", "Nota", "Tipo Frete", "Valor Nota", "KG Nota", "Transportadora",
                "m3", "Peso Cubico", "Peso Usado", "Total (R$)"]
     data = [headers] + _rows_from_queryset(queryset)
 

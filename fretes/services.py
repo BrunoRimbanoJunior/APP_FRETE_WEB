@@ -1,9 +1,9 @@
 
 from decimal import Decimal
 
-def calcular_frete(pedido, carrier, kg_nota: Decimal, valor_nota: Decimal | None):
+def calcular_frete(m3_value: Decimal, carrier, kg_nota: Decimal, valor_nota: Decimal | None):
     tab = carrier.tabela
-    m3 = pedido.m3 or Decimal("0")
+    m3 = Decimal(m3_value or 0)
     fator = tab.fator_peso_cubico or Decimal("230")
     peso_cubico = (m3 * fator).quantize(Decimal("0.01"))
     peso_usado = max(Decimal(kg_nota or 0), Decimal(peso_cubico or 0))

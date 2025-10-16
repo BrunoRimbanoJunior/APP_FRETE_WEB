@@ -49,11 +49,12 @@
         {% csrf_token %}
         <div class="form-row">
             <div class="form-col">
-                <label for="id_numero_pedido">{{ form.numero_pedido.label }}</label>
+                <label for="id_numero_pedido">Pedidos (separe por vírgula)</label>
                 <input
                     id="id_numero_pedido"
                     type="text"
                     name="numero_pedido"
+                    placeholder="Ex.: 12345, 12346, 12347"
                     list="pedidos-datalist"
                     hx-get="{% url 'fretes:pedidos_autocomplete' %}"
                     hx-trigger="keyup changed delay:200ms"
@@ -62,6 +63,7 @@
                     hx-include="[name='numero_pedido']"
                     value="{{ form.data.numero_pedido|default:'' }}"
                 >
+                <small class="text-muted">Use vírgula para múltiplos pedidos.</small>
                 <datalist id="pedidos-datalist"></datalist>
             </div>
             <div class="form-col">
@@ -81,6 +83,26 @@
                 {{ form.kg_nota }}
             </div>
         </div>
+
+        <div id="frete-alerta" class="alert alert-warning mt-3" style="display:none;">
+            <div>Valor da nota abaixo do mínimo para frete pago (R$ 4.000,00).</div>
+            <div class="form-row mt-2">
+                <div class="form-col">
+                    <label for="id_tipo_frete">Tipo de frete</label>
+                    <select name="tipo_frete" id="id_tipo_frete" onchange="if(window.toggleCampos){window.toggleCampos();}">
+                        <option value="">-- selecione --</option>
+                        <option value="pago">Frete Pago</option>
+                        <option value="a_pagar">Frete a Pagar</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row mt-2" id="autorizado_por_wrap" style="display:none;">
+                <div class="form-col">
+                    <label for="id_autorizado_por">Autorizado por</label>
+                    <input type="text" name="autorizado_por" id="id_autorizado_por" placeholder="Nome de quem autorizou" />
+                </div>
+            </div>
+        </div>
         <div class="btn-container">
             <button class="btn btn-primary">Calcular</button>
         </div>
@@ -90,4 +112,49 @@
         {% include "fretes/_resultado.html" %}
     </div>
 </div>
+<script>
+  (function(){
+    function parseValor(v){
+      if(!v) return 0;
+      v = (''+v).replace(/\./g,'').replace(',', '.');
+      var n = parseFloat(v); return isNaN(n)?0:n;
+    }
+    function toggleCampos(){
+      var valor = document.getElementById('id_valor_nota');
+      var alerta = document.getElementById('frete-alerta');
+      var tipo = document.getElementById('id_tipo_frete');
+      var authWrap = document.getElementById('autorizado_por_wrap');
+      if(!valor || !alerta) return;
+      var n = parseValor(valor.value);
+      if(n > 0 && n < 4000){
+        alerta.style.display = '';
+        if (authWrap) {
+          if (tipo && tipo.value === 'pago') {
+            authWrap.style.display = '';
+          } else {
+            authWrap.style.display = 'none';
+          }
+        }
+      } else {
+        alerta.style.display = 'none';
+        if(tipo){ tipo.value=''; }
+        if(authWrap){ authWrap.style.display='none'; }
+      }
+    }
+    document.addEventListener('input', function(e){
+      if(e.target && e.target.id === 'id_valor_nota'){
+        toggleCampos();
+      }
+    });
+    document.addEventListener('change', function(e){
+      if(e.target && e.target.id === 'id_tipo_frete'){
+        toggleCampos();
+      }
+    });
+    // expõe para inline handler
+    window.toggleCampos = toggleCampos;
+    // Inicializa se vier preenchido
+    toggleCampos();
+  })();
+</script>
 {% endblock %}

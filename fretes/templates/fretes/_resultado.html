@@ -3,7 +3,13 @@
     <div class="card-body">
       <h6 class="card-title">Resultado</h6>
       <ul class="mb-0">
-        <li><strong>Pedido:</strong> {{ pedido.numero_pedido }}</li>
+        <li><strong>Pedidos:</strong>
+          {% if pedidos %}
+            {% for p in pedidos %}{% if not forloop.first %}, {% endif %}{{ p.numero_pedido }}{% empty %}{{ pedido.numero_pedido }}{% endfor %}
+          {% else %}
+            {{ pedido.numero_pedido }}
+          {% endif %}
+        </li>
         <li><strong>Transportadora:</strong> {{ carrier }}</li>
         <li><strong>m³:</strong> {{ resultado.m3 }}</li>
         <li><strong>Peso cúbico:</strong> {{ resultado.peso_cubico }} kg</li>

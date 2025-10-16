@@ -1,31 +1,64 @@
 
 from django import forms
 from django.forms import ModelForm
-from .models import Carrier, Pedido, PedidoVolume, Produto, Cliente, Garantia
+from .models import Carrier, Pedido, PedidoVolume, Produto, Cliente, Garantia, FreteCalculado
 
 class CalcularFreteForm(forms.Form):
-    numero_pedido = forms.CharField(label="Pedido")
+    # Suporta multiplos pedidos separados por virgula
+    numero_pedido = forms.CharField(label="Pedidos")
     carrier = forms.ModelChoiceField(queryset=Carrier.objects.all(), required=False)
     numero_nota = forms.CharField(required=False, label="Numero nota")
     valor_nota = forms.DecimalField(required=False, min_value=0, decimal_places=2, max_digits=12, label="Valor nota")
     kg_nota = forms.DecimalField(min_value=0, decimal_places=2, max_digits=12, label="Kg nota")
+    # Novo: tipo de frete e autorizacao condicional
+    tipo_frete = forms.ChoiceField(
+        choices=FreteCalculado.TIPOS_FRETE,
+        required=False,
+        label="Tipo de frete",
+    )
+    autorizado_por = forms.CharField(required=False, label="Autorizado por")
 
     def clean(self):
         data = super().clean()
-        numero_pedido = data.get("numero_pedido")
-        if not numero_pedido:
-            raise forms.ValidationError("Informe o numero do pedido.")
+        pedidos_raw = (data.get("numero_pedido") or "").strip()
+        if not pedidos_raw:
+            raise forms.ValidationError("Informe ao menos um numero de pedido (separe por virgula).")
 
-        try:
-            pedido = Pedido.objects.get(numero_pedido=numero_pedido)
-        except Pedido.DoesNotExist:
-            raise forms.ValidationError("Pedido nao encontrado. Cadastre o pedido antes de calcular.")
+        numeros = [p.strip() for p in pedidos_raw.replace(";", ",").split(",") if p.strip()]
+        if not numeros:
+            raise forms.ValidationError("Informe ao menos um numero de pedido valido.")
 
-        carrier = data.get("carrier") or pedido.carrier
+        pedidos = list(Pedido.objects.filter(numero_pedido__in=numeros).prefetch_related("volumes"))
+        encontrados = {p.numero_pedido for p in pedidos}
+        faltando = [n for n in numeros if n not in encontrados]
+        if faltando:
+            raise forms.ValidationError(f"Pedidos nao encontrados: {', '.join(faltando)}. Cadastre-os antes de calcular.")
+
+        # Determina carrier
+        carrier = data.get("carrier")
         if not carrier:
-            raise forms.ValidationError("Selecione uma transportadora ou vincule uma ao pedido.")
+            carriers = {p.carrier_id for p in pedidos if p.carrier_id}
+            if len(carriers) == 1:
+                # Usa a do unico carrier presente
+                carrier = pedidos[0].carrier
+            else:
+                raise forms.ValidationError("Selecione uma transportadora.")
 
-        data["pedido"] = pedido
+        # Validacao para tipo de frete quando valor_nota < 4000
+        valor_nota = data.get("valor_nota")
+        tipo = (data.get("tipo_frete") or "").strip()
+        if valor_nota is not None:
+            try:
+                below = float(valor_nota) < 4000
+            except Exception:
+                below = False
+            if below:
+                if not tipo:
+                    self.add_error("tipo_frete", "Selecione o tipo de frete.")
+                if tipo == FreteCalculado.TIPO_PAGO and not (data.get("autorizado_por") or "").strip():
+                    self.add_error("autorizado_por", "Obrigatorio quando frete pago com valor da nota < 4.000,00.")
+
+        data["pedidos"] = pedidos
         data["carrier"] = carrier
         return data
 

@@ -1,4 +1,4 @@
-﻿from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import Http404
@@ -181,63 +181,6 @@ def pedido_create(request):
     )
 # fretes/views.py
 
-@permission_required('fretes.can_use_calcular', raise_exception=True)
-def calcular_view(request):
-    context = {}
-    if request.method == "POST":
-        form = CalcularFreteForm(request.POST)
-        if form.is_valid():
-            # ðŸ’¡ Obtemos o nÃºmero do pedido dos dados limpos do formulÃ¡rio
-            numero_pedido = form.cleaned_data["numero_pedido"]
-            carrier = form.cleaned_data["carrier"]
-            kg_nota = form.cleaned_data["kg_nota"]
-            valor_nota = form.cleaned_data.get("valor_nota")
-            numero_nota = form.cleaned_data.get("numero_nota", "")
-
-            # ðŸ’¡ Buscamos o pedido novamente, desta vez com prefetch_related
-            # para garantir que os volumes estÃ£o carregados.
-            try:
-                pedido = Pedido.objects.prefetch_related('volumes').get(numero_pedido=numero_pedido)
-            except Pedido.DoesNotExist:
-                # Caso o pedido nÃ£o seja encontrado (mesmo apÃ³s a validaÃ§Ã£o)
-                form.add_error("numero_pedido", "Pedido nÃ£o encontrado.")
-                context["form"] = form
-                return render(request, "fretes/calcular.html", context)
-
-            # Nova lÃ³gica: recalcula o m3 total do pedido a partir dos volumes
-            m3_total_pedido = _calcular_m3_total_pedido(pedido)
-
-            # Atualiza o campo m3 do pedido com o valor total calculado
-            pedido.m3 = m3_total_pedido
-            pedido.save(update_fields=["m3"])
-            
-            # Passa o m3 atualizado para a funÃ§Ã£o de cÃ¡lculo de frete
-            r = calcular_frete(pedido, carrier, kg_nota, valor_nota)
-
-            FreteCalculado.objects.update_or_create(
-                numero_pedido=pedido.numero_pedido,
-                carrier=carrier,
-                defaults={
-                    "data_calculo": timezone.now().date(),
-                    "numero_nota": numero_nota,
-                    "valor_nota": valor_nota or 0,
-                    "kg_nota": kg_nota,
-                    "m3": r["m3"],
-                    "peso_cubico": r["peso_cubico"],
-                    "peso_usado": r["peso_usado"],
-                    "frete_total": r["frete_total"],
-                },
-            )
-            context.update({"resultado": r, "pedido": pedido, "carrier": carrier, "form": form})
-            if request.headers.get("HX-Request") == "true":
-                return render(request, "fretes/_resultado.html", context)
-        else:
-            if request.headers.get("HX-Request") == "true":
-                return render(request, "fretes/_resultado.html", {"form": form})
-    else:
-        form = CalcularFreteForm()
-    context["form"] = form
-    return render(request, "fretes/calcular.html", context)
 
 
 def index_view(request):
@@ -312,7 +255,8 @@ def pedido_relatorio(request, pk: int):
 
 @permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_view(request):
-    f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").all())
+    base_qs = FreteCalculado.objects.select_related("carrier").prefetch_related("pedidos").all()
+    f = FreteCalculadoFilter(request.GET, queryset=base_qs)
     export = request.GET.get("export")
     if export == "xlsx":
         return exportar_fretes_excel(f.qs)
@@ -322,7 +266,7 @@ def relatorios_view(request):
 
 @permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_pdf_view(request):
-    f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").all())
+    f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").prefetch_related("pedidos").all())
     return exportar_fretes_pdf(f.qs)
 
 def pedidos_autocomplete(request):
@@ -484,7 +428,7 @@ def garantia_create(request):
             messages.success(request, "Garantia registrada com sucesso.")
             return redirect("fretes:garantia_list")
         else:
-            messages.error(request, "Corrija os erros do formulÃ¡rio.")
+            messages.error(request, "Corrija os erros do formulário.")
     else:
         form = GarantiaForm()
     produtos = Produto.objects.all().order_by("codigo")
@@ -500,7 +444,7 @@ def garantia_update(request, pk: int):
             messages.success(request, "Garantia atualizada.")
             return redirect("fretes:garantia_list")
         else:
-            messages.error(request, "Corrija os erros do formulÃ¡rio.")
+            messages.error(request, "Corrija os erros do formulário.")
     else:
         form = GarantiaForm(instance=garantia)
     produtos = Produto.objects.all().order_by("codigo")
@@ -602,10 +546,10 @@ def admin_import_produtos(request):
             wb = load_workbook(filename=arquivo, data_only=True)
             ws = wb.active
         except Exception as e:
-            messages.error(request, f"Arquivo invÃ¡lido: {e}")
+            messages.error(request, f"Arquivo inválido: {e}")
             return render(request, "fretes/import_produtos.html", context)
 
-        # Normaliza cabeÃ§alhos removendo acentos e padronizando (CM)
+        # Normaliza cabeçalhos removendo acentos e padronizando (CM)
         import unicodedata as _ud
 
         def norm_header(s: str) -> str:
@@ -622,7 +566,7 @@ def admin_import_produtos(request):
         headers = [norm_header(h) for h in headers_raw]
         index = {h: i for i, h in enumerate(headers)}
 
-        # Aceita variaÃ§Ãµes com/sem acentos e parÃªnteses
+        # Aceita variações com/sem acentos e parênteses
         required = {
             "CODIGO": ["CODIGO"],
             "DESCRICAO": ["DESCRICAO"],
@@ -643,7 +587,7 @@ def admin_import_produtos(request):
         missing_keys = [k for k in required if not find_col(k)]
         if missing_keys:
             msgs = ", ".join(missing_keys)
-            messages.error(request, f"Colunas obrigatÃ³rias ausentes: {msgs}")
+            messages.error(request, f"Colunas obrigatórias ausentes: {msgs}")
             return render(request, "fretes/import_produtos.html", context)
 
             if isinstance(v, (int, float)):
@@ -668,7 +612,7 @@ def admin_import_produtos(request):
                     codigo = str(val("CODIGO") or "").strip()
                     if not codigo:
                         continue
-                    # Concatena descriÃ§Ã£o + aplicaÃ§Ã£o, normalizando quebras de linha
+                    # Concatena descrição + aplicação, normalizando quebras de linha
                     def collapse_ws(s: str) -> str:
                         return " ".join(str(s).split())
                     descricao_base = collapse_ws(val("DESCRICAO") or "")
@@ -707,7 +651,7 @@ def admin_import_produtos(request):
             messages.error(request, f"Falha ao importar na linha {linhas+1}: {e}")
             return render(request, "fretes/import_produtos.html", context)
 
-        messages.success(request, f"ImportaÃ§Ã£o concluÃ­da. Linhas lidas: {linhas}. Criados: {criados}. Atualizados: {atualizados}.")
+        messages.success(request, f"Importação concluída. Linhas lidas: {linhas}. Criados: {criados}. Atualizados: {atualizados}.")
 
     return render(request, "fretes/import_produtos.html", context)
 
@@ -721,7 +665,7 @@ def admin_import_clientes(request):
             wb = load_workbook(filename=arquivo, data_only=True)
             ws = wb.active
         except Exception as e:
-            messages.error(request, f"Arquivo invÃ¡lido: {e}")
+            messages.error(request, f"Arquivo inválido: {e}")
             return render(request, "fretes/import_clientes.html", context)
 
         headers = [str(c.value).strip().upper() if c.value is not None else "" for c in next(ws.iter_rows(min_row=1, max_row=1))]
@@ -730,7 +674,7 @@ def admin_import_clientes(request):
         required = ["NOME", "CNPJ", "ENDERECO", "CIDADE", "ESTADO", "EMAIL", "TELEFONE"]
         missing = [h for h in required if h not in index]
         if missing:
-            messages.error(request, f"Colunas obrigatÃ³rias ausentes: {', '.join(missing)}")
+            messages.error(request, f"Colunas obrigatórias ausentes: {', '.join(missing)}")
             return render(request, "fretes/import_clientes.html", context)
 
         def cell(col, row):
@@ -776,7 +720,7 @@ def admin_import_clientes(request):
 
         messages.success(
             request,
-            f"ImportaÃ§Ã£o de clientes concluÃ­da. Criados: {criados}. Atualizados: {atualizados}. Ignorados (faltando nome/cnpj): {ignorados}.",
+            f"Importação de clientes concluída. Criados: {criados}. Atualizados: {atualizados}. Ignorados (faltando nome/cnpj): {ignorados}.",
         )
 
     return render(request, "fretes/import_clientes.html", context)
@@ -858,4 +802,69 @@ def audit_log_view(request):
 
 
 
+@permission_required('fretes.can_use_calcular', raise_exception=True)
+def calcular_view(request):
+    context = {}
+    if request.method == "POST":
+        form = CalcularFreteForm(request.POST)
+        if form.is_valid():
+            pedidos = form.cleaned_data["pedidos"]
+            carrier = form.cleaned_data["carrier"]
+            kg_nota = form.cleaned_data["kg_nota"]
+            valor_nota = form.cleaned_data.get("valor_nota")
+            numero_nota = (form.cleaned_data.get("numero_nota") or "").strip()
+            tipo_frete = (form.cleaned_data.get("tipo_frete") or "").strip() or None
+            autorizado_por = (form.cleaned_data.get("autorizado_por") or "").strip()
+
+            m3_total = Decimal("0")
+            for p in pedidos:
+                m3_p = _calcular_m3_total_pedido(p)
+                p.m3 = m3_p
+                p.save(update_fields=["m3"])
+                m3_total += m3_p
+
+            r = calcular_frete(m3_total, carrier, kg_nota, valor_nota)
+
+            if len(pedidos) > 1:
+                legacy_num = "MULT"
+            else:
+                legacy_num = pedidos[0].numero_pedido
+
+            defaults = {
+                "data_calculo": timezone.now().date(),
+                "numero_nota": numero_nota,
+                "valor_nota": valor_nota or 0,
+                "kg_nota": kg_nota,
+                "m3": r["m3"],
+                "peso_cubico": r["peso_cubico"],
+                "peso_usado": r["peso_usado"],
+                "frete_total": r["frete_total"],
+                "tipo_frete": tipo_frete or FreteCalculado.TIPO_PAGO,
+                "autorizado_por": autorizado_por,
+            }
+
+            if numero_nota:
+                fc, _ = FreteCalculado.objects.update_or_create(
+                    numero_nota=numero_nota,
+                    carrier=carrier,
+                    defaults={"numero_pedido": legacy_num, **defaults},
+                )
+            else:
+                fc = FreteCalculado.objects.create(
+                    numero_pedido=legacy_num,
+                    carrier=carrier,
+                    **defaults,
+                )
+            fc.pedidos.set(pedidos)
+
+            context.update({"resultado": r, "pedidos": pedidos, "carrier": carrier, "form": form})
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "fretes/_resultado.html", context)
+        else:
+            if request.headers.get("HX-Request") == "true":
+                return render(request, "fretes/_resultado.html", {"form": form})
+    else:
+        form = CalcularFreteForm()
+    context["form"] = form
+    return render(request, "fretes/calcular.html", context)
 

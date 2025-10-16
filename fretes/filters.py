@@ -18,9 +18,16 @@ class FreteCalculadoFilter(django_filters.FilterSet):
     )
     carrier = django_filters.ModelChoiceFilter(
         queryset=Carrier.objects.all(),
-        label="Transportadora"
+        label="Transportadora",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    tipo_frete = django_filters.ChoiceFilter(
+        field_name="tipo_frete",
+        choices=FreteCalculado.TIPOS_FRETE,
+        label="Tipo de frete",
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     class Meta:
         model = FreteCalculado
-        fields = ["carrier", "start_date", "end_date"]
+        fields = ["carrier", "tipo_frete", "start_date", "end_date"]
