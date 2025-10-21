@@ -9,18 +9,21 @@ from fretes.services import calcular_frete
 class Tipo1CalculoTest(TestCase):
     def setUp(self):
         self.carrier = Carrier.objects.create(nome="Tipo1 Co")
-        # Parametros configurados para refletir a planilha fornecida,
-        # mantendo a logica do tipo 1 atual (faixas + pedagio linear).
+        # Parametros conforme tabela "IZABEL" (faixas + pedagio por blocos de 100kg)
         self.tab = FreightTable.objects.create(
             carrier=self.carrier,
             tipo_calculo=1,
             fator_peso_cubico=Decimal("230"),
-            peso_ate_300=Decimal("161.12"),  # base para <= 300 kg
-            frete_ton=Decimal("650.00"),
-            frete_minimo=Decimal("0.00"),
-            frete_valor_perc=Decimal("0.20"),  # %
-            gris_perc=Decimal("0.00"),         # nao considerado no exemplo
-            pedagio=Decimal("4.75"),            # ajustado para pedagio linear
+            peso_ate_50=Decimal("81.47"),
+            peso_ate_100=Decimal("91.66"),
+            peso_ate_150=Decimal("103.28"),
+            peso_ate_200=Decimal("113.47"),
+            peso_ate_300=Decimal("133.84"),
+            frete_ton=Decimal("509.16"),
+            frete_minimo=Decimal("116.38"),
+            frete_valor_perc=Decimal("0.23"),
+            gris_perc=Decimal("0.00"),
+            pedagio=Decimal("3.91"),
             valor_despacho=Decimal("0.00"),
         )
 
@@ -35,7 +38,5 @@ class Tipo1CalculoTest(TestCase):
         # Peso cubico considerando fator 230
         self.assertEqual(r["peso_cubico"], Decimal("284.05"))
 
-        # Total conforme regras do tipo 1: base(161.12) + frete_valor(32.14) + pedagio(~13.48)
-        # Pedagio linear = (284.05/100) * 4.75 = 13.48 (arredondado 0.01)
-        self.assertEqual(r["frete_total"], Decimal("206.75"))
-
+        # Total conforme planilha: base(<=300)=133.84 + frete_valor(0.23%)=36.96 + pedagio=ceil(284.05/100)*3.91=11.73
+        self.assertEqual(r["frete_total"], Decimal("182.53"))

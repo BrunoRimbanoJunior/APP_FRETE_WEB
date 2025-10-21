@@ -34,7 +34,9 @@ def _tipo1_impl(m3_value: Decimal, carrier, kg_nota: Decimal, valor_nota: Decima
     # 💡 Lógica corrigida para o pedágio
     pedagio = Decimal("0")
     if tab.pedagio:
-        pedagio = (peso_usado / Decimal(100)) * tab.pedagio
+        from decimal import ROUND_CEILING
+        blocos = (peso_usado / Decimal("100")).to_integral_value(rounding=ROUND_CEILING)
+        pedagio = (blocos * Decimal(tab.pedagio)).quantize(Decimal("0.01"))
 
     # Valor de despacho é fixo por nota
     valor_despacho = Decimal(getattr(tab, "valor_despacho", 0) or 0)
