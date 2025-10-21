@@ -160,3 +160,5 @@ docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py m
 
   # ou com dbtools efêmero
   docker compose -f deploy/docker-compose.backup.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
+
+12) Teste de calculo de fretes, dentro do container web rodar os teste , pytest fretes/tests/test_tipo1_calculo.py -q, pytest fretes/tests/test_tipo2_calculo.py -q, ou para rodar todos de uma vez pytest -q

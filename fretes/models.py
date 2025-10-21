@@ -22,6 +22,9 @@ class FreightTable(models.Model):
     carrier = models.OneToOneField(
         Carrier, on_delete=models.CASCADE, related_name="tabela"
     )
+    tipo_calculo = models.PositiveSmallIntegerField(
+        "Tipo de calculo", default=1
+    )
     peso_ate_50 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     peso_ate_100 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     peso_ate_150 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
