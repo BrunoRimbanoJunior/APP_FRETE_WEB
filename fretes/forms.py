@@ -155,7 +155,7 @@ class GarantiaForm(ModelForm):
         marca = (self.cleaned_data.get("marca") or "").strip()
         if not marca:
             raise forms.ValidationError("Informe a marca da peca.")
-        return marca
+        return marca.upper()
 
     def clean(self):
         data = super().clean()
@@ -210,7 +210,7 @@ class GarantiaItemForm(forms.Form):
         marca = (self.cleaned_data.get("marca") or "").strip()
         if not marca:
             raise forms.ValidationError("Informe a marca da peca.")
-        return marca
+        return marca.upper()
 
     def clean(self):
         data = super().clean()

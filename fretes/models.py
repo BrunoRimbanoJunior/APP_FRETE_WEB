@@ -184,6 +184,19 @@ class Garantia(models.Model):
         return self.STATUS_ATENDIDO if self.nota_retorno else self.STATUS_EM_ABERTO
 
 
+@receiver(pre_save, sender=Garantia)
+def _upper_marca_on_save(sender, instance: "Garantia", **kwargs):
+    try:
+        marca = (getattr(instance, "marca", "") or "").strip()
+        if not marca:
+            instance.marca = "NAO INFORMADO"
+        else:
+            instance.marca = marca.upper()
+    except Exception:
+        # Nao impede o save caso algo inusitado ocorra
+        pass
+
+
 # Auditoria
 class AuditLog(models.Model):
     ACTIONS = (
