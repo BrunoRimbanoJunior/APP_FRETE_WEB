@@ -23,6 +23,14 @@
           {% endfor %}
         </select>
       </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select">
+          <option value="" {% if not tipo %}selected{% endif %}>Todos</option>
+          <option value="garantia" {% if tipo == 'garantia' %}selected{% endif %}>Garantia</option>
+          <option value="devolucao" {% if tipo == 'devolucao' %}selected{% endif %}>Devolucao</option>
+        </select>
+      </div>
       <div class="col-12 col-sm-6 col-md-2 d-flex gap-2">
         <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
       </div>
@@ -30,8 +38,8 @@
   </form>
 
   <div class="mb-3 d-flex gap-2">
-    <a class="btn btn-success btn-sm" href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}export=xlsx">Exportar Excel</a>
-    <a class="btn btn-danger btn-sm" href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}export=pdf">Exportar PDF</a>
+    <a class="btn btn-success btn-sm" href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}{% if tipo %}tipo={{ tipo }}&{% endif %}export=xlsx">Exportar Excel</a>
+    <a class="btn btn-danger btn-sm" href="?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}{% if tipo %}tipo={{ tipo }}&{% endif %}export=pdf">Exportar PDF</a>
   </div>
 
   <div class="table-responsive">
@@ -48,7 +56,7 @@
         {% for p in produtos %}
           <tr>
             <td>
-              <a href="{% url 'fretes:garantias_gerencial_produto' p.codigo_peca %}?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}">
+              <a href="{% url 'fretes:garantias_gerencial_produto' p.codigo_peca %}?{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if marca %}marca={{ marca|urlencode }}&{% endif %}{% if tipo %}tipo={{ tipo }}&{% endif %}">
                 {{ p.codigo_peca }}
               </a>
             </td>

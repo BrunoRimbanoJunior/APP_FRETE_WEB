@@ -398,6 +398,7 @@ def garantia_list(request):
     start_date = request.GET.get("start_date", "").strip()
     end_date = request.GET.get("end_date", "").strip()
     status = request.GET.get("status", "").strip()  # em_aberto | atendido
+    tipo = request.GET.get("tipo", "").strip()  # garantia | devolucao
 
     qs = Garantia.objects.select_related("cliente").all().order_by("-data_recebimento", "-id")
     if nota:
@@ -414,6 +415,8 @@ def garantia_list(request):
         qs = qs.filter(Q(nota_retorno__isnull=True) | Q(nota_retorno__exact=""))
     elif status == Garantia.STATUS_ATENDIDO:
         qs = qs.filter(nota_retorno__isnull=False).exclude(nota_retorno__exact="")
+    if tipo in (Garantia.TIPO_GARANTIA, Garantia.TIPO_DEVOLUCAO):
+        qs = qs.filter(tipo=tipo)
     export = request.GET.get("export")
     if export == "xlsx":
         return exportar_garantias_excel(qs)
@@ -428,6 +431,7 @@ def garantia_list(request):
         "start_date": start_date,
         "end_date": end_date,
         "status": status,
+        "tipo": tipo,
     }
     return render(request, "fretes/garantias_list.html", context)
 
@@ -531,6 +535,7 @@ def garantia_create_multi(request):
                         data_retorno=item.get("data_retorno"),
                         mao_de_obra=item.get("mao_de_obra") or False,
                         valor_mao_de_obra=item.get("valor_mao_de_obra") or 0,
+                        tipo=(dados.get("tipo") or Garantia.TIPO_GARANTIA),
                     )
                     created += 1
             messages.success(request, f"{created} produto(s) adicionados a garantia.")
@@ -556,6 +561,7 @@ def garantias_gerencial_view(request):
     start_date = (request.GET.get("start_date") or "").strip()
     end_date = (request.GET.get("end_date") or "").strip()
     marca = (request.GET.get("marca") or "").strip()
+    tipo = (request.GET.get("tipo") or "").strip()
 
     qs = Garantia.objects.select_related("cliente").all()
     if start_date:
@@ -564,6 +570,8 @@ def garantias_gerencial_view(request):
         qs = qs.filter(data_recebimento__lte=end_date)
     if marca and marca.lower() != "todas":
         qs = qs.filter(marca=marca)
+    if tipo in (Garantia.TIPO_GARANTIA, Garantia.TIPO_DEVOLUCAO):
+        qs = qs.filter(tipo=tipo)
 
     export = (request.GET.get("export") or "").lower()
     if export == "xlsx":
@@ -612,6 +620,7 @@ def garantias_gerencial_view(request):
         "end_date": end_date,
         "marca": marca,
         "marcas": list(marcas),
+        "tipo": tipo,
     }
     return render(request, "fretes/garantias_gerencial.html", context)
 
@@ -621,6 +630,7 @@ def garantias_gerencial_produto_view(request, codigo_peca: str):
     start_date = (request.GET.get("start_date") or "").strip()
     end_date = (request.GET.get("end_date") or "").strip()
     marca = (request.GET.get("marca") or "").strip()
+    tipo = (request.GET.get("tipo") or "").strip()
 
     qs = (
         Garantia.objects.select_related("cliente")
@@ -633,6 +643,8 @@ def garantias_gerencial_produto_view(request, codigo_peca: str):
         qs = qs.filter(data_recebimento__lte=end_date)
     if marca and marca.lower() != "todas":
         qs = qs.filter(marca=marca)
+    if tipo in (Garantia.TIPO_GARANTIA, Garantia.TIPO_DEVOLUCAO):
+        qs = qs.filter(tipo=tipo)
 
     export = (request.GET.get("export") or "").lower()
     if export == "xlsx":
@@ -650,6 +662,7 @@ def garantias_gerencial_produto_view(request, codigo_peca: str):
         "start_date": start_date,
         "end_date": end_date,
         "marca": marca,
+        "tipo": tipo,
     }
     return render(request, "fretes/garantias_gerencial_produto.html", context)
 # ---------------- Ferramentas administrativas ----------------

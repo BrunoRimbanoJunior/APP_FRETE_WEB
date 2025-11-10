@@ -294,6 +294,7 @@ def _garantias_rows(queryset):
             g.data_recebimento.strftime("%d/%m/%Y") if g.data_recebimento else "",
             g.nota_retorno or "",
             g.data_retorno.strftime("%d/%m/%Y") if g.data_retorno else "",
+            ("Garantia" if (getattr(g, "tipo", "garantia") == "garantia") else "Devolucao"),
             "Atendido" if g.nota_retorno else "Em aberto",
         ])
     return rows
@@ -306,7 +307,7 @@ def exportar_garantias_excel(queryset):
 
     headers = [
         "ID", "Cliente", "CNPJ", "Cod. Peca", "Marca", "Defeito", "Lote",
-        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
+        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Tipo", "Status"
     ]
     ws.append(headers)
     for row in _garantias_rows(queryset):
@@ -339,7 +340,7 @@ def exportar_garantias_pdf(queryset):
 
     headers = [
         "ID", "Cliente", "CNPJ", "Cod. Peca", "Marca", "Defeito", "Lote",
-        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Status"
+        "Nota Recebida", "Valor", "Mao de Obra", "Valor M.O.", "Recebido em", "Nota Retorno", "Retorno em", "Tipo", "Status"
     ]
     rows = _garantias_rows(queryset)
 
@@ -385,7 +386,8 @@ def exportar_garantias_pdf(queryset):
         recebido_em = Paragraph(html.escape(_fmt_date_br(row[11]) or ""), small_center)
         nota_retorno = Paragraph(html.escape(str(row[12] or "")), small_left)
         retorno_em = Paragraph(html.escape(_fmt_date_br(row[13]) or ""), small_center)
-        status = Paragraph(html.escape(str(row[14])), small_center)
+        tipo = Paragraph(html.escape(str(row[14])), small_center)
+        status = Paragraph(html.escape(str(row[15])), small_center)
 
         table_data.append([
             id_value,
@@ -402,10 +404,11 @@ def exportar_garantias_pdf(queryset):
             recebido_em,
             nota_retorno,
             retorno_em,
+            tipo,
             status,
         ])
 
-    ratios = [0.04, 0.13, 0.09, 0.06, 0.07, 0.11, 0.05, 0.06, 0.05, 0.05, 0.05, 0.06, 0.06, 0.06, 0.06]
+    ratios = [0.04, 0.13, 0.09, 0.07, 0.07, 0.11, 0.05, 0.05, 0.05, 0.05, 0.05, 0.06, 0.06, 0.06, 0.05, 0.06]
     available_width = doc.width
     col_widths = [available_width * r for r in ratios]
 
@@ -414,7 +417,7 @@ def exportar_garantias_pdf(queryset):
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -568,7 +571,7 @@ def exportar_garantias_gerencial_produto_excel(queryset, codigo_peca: str):
     ws.append(["Produto", codigo_peca])
     ws.append([])
 
-    headers = ["Cliente", "Nota", "Marca", "Defeito", "Valor", "Recebido em"]
+    headers = ["Cliente", "Nota", "Marca", "Defeito", "Tipo", "Valor", "Recebido em"]
     ws.append(headers)
     total = 0.0
     for g in queryset:
@@ -579,12 +582,13 @@ def exportar_garantias_gerencial_produto_excel(queryset, codigo_peca: str):
             getattr(g, "nota_recebida", ""),
             getattr(g, "marca", "Nao Informado") or "Nao Informado",
             g.defeito,
+            ("Garantia" if (getattr(g, "tipo", "garantia") == "garantia") else "Devolucao"),
             _fmt_number_br(valor),
             _fmt_date_br(g.data_recebimento),
         ])
 
     ws.append([])
-    ws.append(["Total", "", "", "", _fmt_number_br(total), ""]) 
+    ws.append(["Total", "", "", "", "", _fmt_number_br(total), ""]) 
 
     buf = BytesIO()
     wb.save(buf)
@@ -611,7 +615,7 @@ def exportar_garantias_gerencial_produto_pdf(queryset, codigo_peca: str):
 
     title = Paragraph(f"Garantias do Produto: {html.escape(str(codigo_peca))}", styles["Title"])
 
-    headers = ["Cliente", "NOTA", "Marca", "Defeito", "Valor", "Recebido em"]
+    headers = ["Cliente", "Nota", "Marca", "Defeito", "Tipo", "Valor", "Recebido em"]
     rows = []
     total = 0.0
     for g in queryset:
@@ -622,6 +626,7 @@ def exportar_garantias_gerencial_produto_pdf(queryset, codigo_peca: str):
             Paragraph(html.escape(getattr(g, "nota_recebida", "")), styles["BodyText"]),
             Paragraph(html.escape(getattr(g, "marca", "Nao Informado") or "Nao Informado"), styles["BodyText"]),
             Paragraph(html.escape(g.defeito or ""), styles["BodyText"]),
+            Paragraph(html.escape("Garantia" if (getattr(g, "tipo", "garantia") == "garantia") else "Devolucao"), styles["BodyText"]),
             _fmt_number_br(valor),
             _fmt_date_br(g.data_recebimento),
         ])
@@ -631,12 +636,12 @@ def exportar_garantias_gerencial_produto_pdf(queryset, codigo_peca: str):
     # Adiciona uma margem interna horizontal para não colar nas bordas da página
     inner_margin = 16  # px a cada lado dentro da área útil
     available_width = max(100, doc.width - (inner_margin * 2))
-    base_ratios = [0.32, 0.16, 0.12, 0.28, 0.07]  # Cliente, Nota, Marca, Defeito, Valor
+    base_ratios = [0.27, 0.14, 0.12, 0.24, 0.08, 0.09]  # Cliente, Nota, Marca, Defeito, Tipo, Valor
     first_widths = [available_width * r for r in base_ratios]
-    last_width = max(90, available_width - sum(first_widths))  # Recebido em (garante caber data)
+    last_width = max(90, available_width - sum(first_widths))  # Recebido em
     col_widths = first_widths + [last_width]
 
-    data = [headers] + rows + [["", "", "", "Total", _fmt_number_br(total), ""]]
+    data = [headers] + rows + [["", "", "", "", "Total", _fmt_number_br(total), ""]]
     table = Table(data, repeatRows=1, colWidths=col_widths, hAlign='CENTER')
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
@@ -646,8 +651,8 @@ def exportar_garantias_gerencial_produto_pdf(queryset, codigo_peca: str):
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
-        ("ALIGN", (4, 1), (4, -1), "RIGHT"),
-        ("ALIGN", (5, 1), (5, -1), "CENTER"),
+        ("ALIGN", (5, 1), (5, -1), "RIGHT"),
+        ("ALIGN", (6, 1), (6, -1), "CENTER"),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
         ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor('#eef2f7')),
     ]))

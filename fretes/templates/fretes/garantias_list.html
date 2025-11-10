@@ -75,6 +75,14 @@
           <option value="atendido" {% if status == 'atendido' %}selected{% endif %}>Atendido</option>
         </select>
       </div>
+      <div class="col-12 col-sm-6 col-md-3">
+        <label class="form-label">Tipo</label>
+        <select name="tipo" class="form-select">
+          <option value="" {% if not tipo %}selected{% endif %}>Todos</option>
+          <option value="garantia" {% if tipo == 'garantia' %}selected{% endif %}>Garantia</option>
+          <option value="devolucao" {% if tipo == 'devolucao' %}selected{% endif %}>Devolucao</option>
+        </select>
+      </div>
       <div class="col-12 col-sm-6 col-md-3 d-flex gap-2">
         <button class="btn btn-outline-secondary w-100" type="submit">Filtrar</button>
       </div>
@@ -82,8 +90,8 @@
   </form>
 
   <div class="mb-3 d-flex gap-2">
-    <a class="btn btn-success btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}export=xlsx">Exportar Excel</a>
-    <a class="btn btn-danger btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}export=pdf">Exportar PDF</a>
+    <a class="btn btn-success btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if tipo %}tipo={{ tipo }}&{% endif %}export=xlsx">Exportar Excel</a>
+    <a class="btn btn-danger btn-sm" href="?{% if nota %}nota={{ nota|urlencode }}&{% endif %}{% if cnpj %}cnpj={{ cnpj|urlencode }}&{% endif %}{% if nome %}nome={{ nome|urlencode }}&{% endif %}{% if start_date %}start_date={{ start_date }}&{% endif %}{% if end_date %}end_date={{ end_date }}&{% endif %}{% if status %}status={{ status }}&{% endif %}{% if tipo %}tipo={{ tipo }}&{% endif %}export=pdf">Exportar PDF</a>
   </div>
 
   <div class="table-responsive">
@@ -94,6 +102,7 @@
           <th>Cliente</th>
           <th>Cod. Peca</th>
           <th>Marca</th>
+          <th>Tipo</th>
           <th>Nota Recebida</th>
           <th>Valor</th>
           <th>Recebido em</th>
@@ -110,6 +119,7 @@
             <td class="cliente-col">{{ g.cliente.nome }} ({{ g.cliente.cnpj }})</td>
             <td>{{ g.codigo_peca }}</td>
             <td>{{ g.marca|default:"Nao Informado" }}</td>
+            <td>{{ g.get_tipo_display }}</td>
             <td>{{ g.nota_recebida }}</td>
             <td>{{ g.valor }}</td>
             <td>{{ g.data_recebimento }}</td>

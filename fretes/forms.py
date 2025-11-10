@@ -114,7 +114,7 @@ class GarantiaForm(ModelForm):
         model = Garantia
         fields = [
             "cliente", "codigo_peca", "marca", "defeito", "numero_lote",
-            "nota_recebida", "valor", "data_recebimento",
+            "nota_recebida", "valor", "data_recebimento", "tipo",
             "nota_retorno", "data_retorno", "mao_de_obra", "valor_mao_de_obra"
         ]
         widgets = {
@@ -126,6 +126,7 @@ class GarantiaForm(ModelForm):
             "nota_recebida": forms.TextInput(attrs={"class": "form-control"}),
             "valor": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
             "data_recebimento": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date", "class": "form-control"}),
+            "tipo": forms.Select(attrs={"class": "form-select"}),
             "nota_retorno": forms.TextInput(attrs={"class": "form-control"}),
             "data_retorno": forms.DateInput(attrs={"type": "date", "class": "form-control"}),
             "mao_de_obra": forms.CheckboxInput(attrs={"class": "form-check-input", "id": "id_mao_de_obra"}),
@@ -186,6 +187,15 @@ class GarantiaHeaderForm(forms.Form):
         required=True,
         error_messages={"required": "Informe a data de recebimento."},
         widget=forms.DateInput(attrs={"type": "date", "class": "form-control"}),
+    )
+    tipo = forms.ChoiceField(
+        label="Tipo",
+        choices=(
+            ("garantia", "Garantia"),
+            ("devolucao", "Devolucao"),
+        ),
+        initial="garantia",
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
 

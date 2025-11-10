@@ -157,6 +157,13 @@ class Garantia(models.Model):
     STATUS_EM_ABERTO = "em_aberto"
     STATUS_ATENDIDO = "atendido"
 
+    TIPO_GARANTIA = "garantia"
+    TIPO_DEVOLUCAO = "devolucao"
+    TIPOS = (
+        (TIPO_GARANTIA, "Garantia"),
+        (TIPO_DEVOLUCAO, "Devolucao"),
+    )
+
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="garantias")
     codigo_peca = models.CharField("Codigo da peca", max_length=80)
     marca = models.CharField("Marca", max_length=120, default="Nao Informado")
@@ -170,6 +177,7 @@ class Garantia(models.Model):
     data_retorno = models.DateField("Data de retorno", null=True, blank=True)
     mao_de_obra = models.BooleanField("Com mao de obra", default=False)
     valor_mao_de_obra = models.DecimalField("Valor mao de obra", max_digits=12, decimal_places=2, default=0)
+    tipo = models.CharField("Tipo", max_length=16, choices=TIPOS, default=TIPO_GARANTIA)
 
     class Meta:
         ordering = ["-data_recebimento", "-id"]
