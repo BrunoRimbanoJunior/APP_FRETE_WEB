@@ -33,6 +33,12 @@ urlpatterns = [
     path("garantias/", views.garantia_list, name="garantia_list"),
     path("garantias/novo/", views.garantia_create_multi, name="garantia_create"),
     path("garantias/<int:pk>/editar/", views.garantia_update, name="garantia_update"),
+    path("garantias/gerencial/", views.garantias_gerencial_view, name="garantias_gerencial"),
+    path(
+        "garantias/gerencial/produto/<str:codigo_peca>/",
+        views.garantias_gerencial_produto_view,
+        name="garantias_gerencial_produto",
+    ),
     # Ferramentas administrativas
     path("admin/tools/importar-produtos/", views.admin_import_produtos, name="admin_import_produtos"),
     path("admin/tools/importar-clientes/", views.admin_import_clientes, name="admin_import_clientes"),

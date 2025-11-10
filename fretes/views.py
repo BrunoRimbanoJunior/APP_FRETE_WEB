@@ -15,7 +15,19 @@ from .models import Pedido, PedidoVolume, Carrier, FreteCalculado, Produto, Clie
 from .forms import CalcularFreteForm, PedidoForm, PedidoVolumeForm, ProdutoForm, ClienteForm, GarantiaForm, GarantiaHeaderForm, GarantiaItemForm
 from .filters import FreteCalculadoFilter
 from .services import calcular_frete
-from .exports import exportar_fretes_excel, exportar_fretes_pdf, exportar_garantias_excel, exportar_garantias_pdf, exportar_pedido_excel, exportar_pedido_pdf, exportar_produtos_excel
+from .exports import (
+    exportar_fretes_excel,
+    exportar_fretes_pdf,
+    exportar_garantias_excel,
+    exportar_garantias_pdf,
+    exportar_garantias_gerencial_excel,
+    exportar_garantias_gerencial_pdf,
+    exportar_garantias_gerencial_produto_excel,
+    exportar_garantias_gerencial_produto_pdf,
+    exportar_pedido_excel,
+    exportar_pedido_pdf,
+    exportar_produtos_excel,
+)
 from django.contrib.auth import get_user_model
 from .models import AuditLog
 from django.utils.dateparse import parse_date
@@ -536,6 +548,110 @@ def garantia_create_multi(request):
         "is_new": True,
     }
     return render(request, "fretes/garantias_multi_form.html", ctx)
+
+
+# Relatorio Gerencial de Garantias
+@permission_required('fretes.can_view_reports', raise_exception=True)
+def garantias_gerencial_view(request):
+    start_date = (request.GET.get("start_date") or "").strip()
+    end_date = (request.GET.get("end_date") or "").strip()
+    marca = (request.GET.get("marca") or "").strip()
+
+    qs = Garantia.objects.select_related("cliente").all()
+    if start_date:
+        qs = qs.filter(data_recebimento__gte=start_date)
+    if end_date:
+        qs = qs.filter(data_recebimento__lte=end_date)
+    if marca and marca.lower() != "todas":
+        qs = qs.filter(marca=marca)
+
+    export = (request.GET.get("export") or "").lower()
+    if export == "xlsx":
+        return exportar_garantias_gerencial_excel(qs)
+    if export == "pdf":
+        return exportar_garantias_gerencial_pdf(qs)
+
+    produtos_qs = (
+        qs.values("codigo_peca")
+        .annotate(total_quantidade=Sum("quantidade"), total_valor=Sum("valor"))
+        .order_by("-total_quantidade", "codigo_peca")
+    )
+
+    # Qtd por marca (apenas para exibir no HTML de forma resumida)
+    breakdown_raw = list(
+        qs.values("codigo_peca", "marca").annotate(qtd=Sum("quantidade")).order_by()
+    )
+    by_prod_brand = {}
+    for r in breakdown_raw:
+        key = r["codigo_peca"]
+        by_prod_brand.setdefault(key, []).append({"marca": r["marca"] or "Nao Informado", "qtd": int(r["qtd"] or 0)})
+    # Ordena marcas por qtd desc
+    for key in by_prod_brand:
+        by_prod_brand[key].sort(key=lambda x: (-x["qtd"], str(x["marca"]).lower()))
+
+    produtos = []
+    for r in produtos_qs:
+        codigo = r["codigo_peca"]
+        items = by_prod_brand.get(codigo, [])
+        summary = "; ".join(f"{it['marca']}: {it['qtd']}" for it in items) if items else "-"
+        produtos.append({
+            "codigo_peca": codigo,
+            "total_quantidade": r["total_quantidade"],
+            "total_valor": r["total_valor"],
+            "brand_summary": summary,
+        })
+
+    marcas = (
+        Garantia.objects.values_list("marca", flat=True).distinct().order_by("marca")
+    )
+
+    context = {
+        "produtos": produtos,
+        "by_prod_brand": by_prod_brand,
+        "start_date": start_date,
+        "end_date": end_date,
+        "marca": marca,
+        "marcas": list(marcas),
+    }
+    return render(request, "fretes/garantias_gerencial.html", context)
+
+
+@permission_required('fretes.can_view_reports', raise_exception=True)
+def garantias_gerencial_produto_view(request, codigo_peca: str):
+    start_date = (request.GET.get("start_date") or "").strip()
+    end_date = (request.GET.get("end_date") or "").strip()
+    marca = (request.GET.get("marca") or "").strip()
+
+    qs = (
+        Garantia.objects.select_related("cliente")
+        .filter(codigo_peca=codigo_peca)
+        .order_by("cliente__nome", "-data_recebimento", "-id")
+    )
+    if start_date:
+        qs = qs.filter(data_recebimento__gte=start_date)
+    if end_date:
+        qs = qs.filter(data_recebimento__lte=end_date)
+    if marca and marca.lower() != "todas":
+        qs = qs.filter(marca=marca)
+
+    export = (request.GET.get("export") or "").lower()
+    if export == "xlsx":
+        return exportar_garantias_gerencial_produto_excel(qs, codigo_peca)
+    if export == "pdf":
+        return exportar_garantias_gerencial_produto_pdf(qs, codigo_peca)
+
+    totals = qs.aggregate(total_q=Sum("quantidade"), total_v=Sum("valor"))
+
+    context = {
+        "codigo_peca": codigo_peca,
+        "garantias": qs,
+        "total_q": totals.get("total_q") or 0,
+        "total_v": totals.get("total_v") or 0,
+        "start_date": start_date,
+        "end_date": end_date,
+        "marca": marca,
+    }
+    return render(request, "fretes/garantias_gerencial_produto.html", context)
 # ---------------- Ferramentas administrativas ----------------
 @permission_required('fretes.can_import_products', raise_exception=True)
 def admin_import_produtos(request):
