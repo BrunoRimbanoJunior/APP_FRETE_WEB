@@ -144,36 +144,33 @@ def pedido_create(request):
         form = PedidoForm(request.POST)
         formset = VolumeFormSet(request.POST, prefix="vol")
         if form.is_valid() and formset.is_valid():
-            numero_pedido = form.cleaned_data.get("numero_pedido")
-            pedido, created = Pedido.objects.get_or_create(
-                numero_pedido=numero_pedido,
-                defaults={
-                    "picking": form.cleaned_data.get("picking"),
-                    "carrier": form.cleaned_data.get("carrier"),
-                }
-            )
-            if not created:
-                pedido.picking = form.cleaned_data.get("picking")
-                pedido.carrier = form.cleaned_data.get("carrier")
-                pedido.save(update_fields=["picking", "carrier"])
+            numero_pedido = (form.cleaned_data.get("numero_pedido") or "").strip()
+            # Impede criar quando já existe; instruir a usar edição
+            if Pedido.objects.filter(numero_pedido=numero_pedido).exists():
+                form.add_error(
+                    "numero_pedido",
+                    "Já existe um pedido com este número. Use 'Editar' para alterar.",
+                )
+            else:
+                pedido = Pedido.objects.create(
+                    numero_pedido=numero_pedido,
+                    picking=form.cleaned_data.get("picking"),
+                    carrier=form.cleaned_data.get("carrier"),
+                )
+                # Associa a instancia do pedido ao formset e salva
+                formset.instance = pedido
+                formset.save()
 
-            # Nota: removemos a linha 'pedido.volumes.all().delete()'
-            #    que estava causando o problema.
+                # Atualiza m3 total do pedido apos salvar volumes
+                try:
+                    pedido.refresh_from_db()
+                    pedido.m3 = _calcular_m3_total_pedido(pedido)
+                    pedido.save(update_fields=["m3"])
+                except Exception:
+                    pass
 
-            # Associa a instancia do pedido ao formset e salva
-            formset.instance = pedido
-            formset.save()
-
-            # Atualiza m3 total do pedido apos salvar volumes
-            try:
-                pedido.refresh_from_db()
-                pedido.m3 = _calcular_m3_total_pedido(pedido)
-                pedido.save(update_fields=["m3"])
-            except Exception:
-                pass
-
-            messages.success(request, "Pedido salvo com sucesso.")
-            return redirect("fretes:pedido_list")
+                messages.success(request, "Pedido salvo com sucesso.")
+                return redirect("fretes:pedido_list")
         else:
             # Logica de erro para formulario
             for err in formset.non_form_errors():

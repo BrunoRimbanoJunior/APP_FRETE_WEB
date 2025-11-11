@@ -8,22 +8,31 @@
 </head>
 <body>
 <div class="container">
+    {% if messages %}
+      {% for m in messages %}
+        <div class="alert alert-{{ m.tags }}">{{ m }}</div>
+      {% endfor %}
+    {% endif %}
     <h1>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</h1>
 
-    <form method="post" novalidate>
+    <form method="post" action="{% url 'fretes:pedido_create' %}" novalidate>
         {% csrf_token %}
+        {{ form.non_field_errors }}
         <div class="form-row">
             <div class="form-col form-group">
                 <label>{{ form.numero_pedido.label_tag }}</label>
                 {{ form.numero_pedido }}
+                {{ form.numero_pedido.errors }}
             </div>
             <div class="form-col form-group">
                 <label>{{ form.picking.label_tag }}</label>
                 {{ form.picking }}
+                {{ form.picking.errors }}
             </div>
             <div class="form-col form-group">
                 <label>{{ form.carrier.label_tag }}</label>
                 {{ form.carrier }}
+                {{ form.carrier.errors }}
             </div>
         </div>
         <div class="form-row">
@@ -36,6 +45,7 @@
         <hr>
         <h3>Volumes</h3>
         {{ formset.management_form }}
+        {{ formset.non_form_errors }}
         <div id="volumes-container">
             {% for f in formset.forms %}
                 <div class="volume-container">
@@ -64,6 +74,11 @@
                             <label>Quantidade</label>
                             {{ f.quantidade }}
                         </div>
+                        {% for field, errors in f.errors.items %}
+                          {% for e in errors %}
+                            <div class="text-danger" style="font-size: 0.9em;">{{ field }}: {{ e }}</div>
+                          {% endfor %}
+                        {% endfor %}
                     </div>
                     {{ f.id }}
                 </div>

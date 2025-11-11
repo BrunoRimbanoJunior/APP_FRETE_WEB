@@ -167,3 +167,16 @@ hr {
     text-decoration: none;
 }
 
+
+/* Exibir erros de formulário em vermelho */
+.errorlist {
+    color: #dc3545; /* vermelho */
+    margin: 4px 0 0;
+    padding-left: 18px;
+    font-size: 0.9em;
+}
+
+/* Utilitário opcional usado no template */
+.text-danger {
+    color: #dc3545;
+}
