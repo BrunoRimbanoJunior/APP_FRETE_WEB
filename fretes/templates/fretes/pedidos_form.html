@@ -15,7 +15,7 @@
     {% endif %}
     <h1>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</h1>
 
-    <form method="post" action="{% url 'fretes:pedido_create' %}" novalidate>
+    <form method="post" action="{% if is_new %}{% url 'fretes:pedido_create' %}{% else %}{% url 'fretes:pedido_update' pedido.id %}{% endif %}" novalidate>
         {% csrf_token %}
         {{ form.non_field_errors }}
         <div class="form-row">
