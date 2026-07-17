@@ -8,7 +8,8 @@
 
     {% if erro %}<div class="alert alert-danger" role="alert">{{ erro }}</div>{% endif %}
 
-    <form method="get" id="form-romaneio" class="row g-3 align-items-end">
+    <form method="post" id="form-romaneio" class="row g-3 align-items-end">
+      {% csrf_token %}
       <div class="col-12 col-md-4">
         <label for="numero_romaneio" class="form-label">Numero do romaneio</label>
         <input type="text" class="form-control" id="numero_romaneio" name="numero_romaneio"

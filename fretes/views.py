@@ -284,16 +284,23 @@ def relatorios_pdf_view(request):
 @permission_required('fretes.can_view_reports', raise_exception=True)
 def romaneio_view(request):
     base_qs = FreteCalculado.objects.select_related("carrier").all()
-    filtro = FreteCalculadoFilter(request.GET, queryset=base_qs)
-    numero_romaneio = (request.GET.get("numero_romaneio") or "").strip()
-    selecionados = request.GET.getlist("notas")
-    export = (request.GET.get("export") or "").lower()
-    has_filters = any(request.GET.get(key) for key in ("carrier", "start_date", "end_date"))
-    resultados = filtro.qs if has_filters else base_qs.none()
+    dados = request.POST if request.method == "POST" else None
+    filtro = FreteCalculadoFilter(dados, queryset=base_qs)
+    numero_romaneio = ((dados or {}).get("numero_romaneio") or "").strip()
+    selecionados = dados.getlist("notas") if dados is not None else []
+    export = ((dados or {}).get("export") or "").lower()
+    has_filters = bool(dados) and any(dados.get(key) for key in ("carrier", "start_date", "end_date"))
+    filtros_validos = not has_filters or filtro.form.is_valid()
+    resultados = filtro.qs if has_filters and filtros_validos else base_qs.none()
     erro = ""
 
+    if has_filters and not filtros_validos:
+        erro = "Revise os filtros informados."
+
     if export:
-        if not numero_romaneio:
+        if not filtros_validos:
+            erro = "Nao foi possivel exportar: revise os filtros informados."
+        elif not numero_romaneio:
             erro = "Informe o numero do romaneio."
         elif not selecionados:
             erro = "Selecione pelo menos uma nota para embarque."
