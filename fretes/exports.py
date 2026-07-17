@@ -1,4 +1,5 @@
 import html
+import re
 from decimal import Decimal
 from io import BytesIO
 from django.db.models import Sum, Count
@@ -272,6 +273,89 @@ def exportar_fretes_pdf(queryset):
     buf.close()
     resp = HttpResponse(pdf, content_type="application/pdf")
     resp["Content-Disposition"] = 'attachment; filename=\"fretes.pdf\"'
+    return resp
+
+
+def _romaneio_filename(numero_romaneio):
+    seguro = re.sub(r"[^A-Za-z0-9_-]+", "_", str(numero_romaneio)).strip("_")
+    return seguro or "romaneio"
+
+
+def _romaneio_rows(queryset, prefixo_real=False):
+    rows = []
+    for frete in queryset:
+        valor_nota = _fmt_number_br(frete.valor_nota or 0)
+        valor_frete = _fmt_number_br(frete.frete_total or 0)
+        if prefixo_real:
+            valor_nota = f"R$ {valor_nota}"
+            valor_frete = f"R$ {valor_frete}"
+        rows.append([
+            _fmt_date_br(frete.data_calculo),
+            frete.numero_nota or "",
+            str(frete.carrier),
+            valor_nota,
+            _fmt_number_br(frete.kg_nota or 0),
+            _fmt_number_br_p(frete.m3 or 0, 3),
+            valor_frete,
+        ])
+    return rows
+
+
+def exportar_romaneio_excel(queryset, numero_romaneio):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Romaneio"
+    ws.append(["Romaneio de entrega", str(numero_romaneio)])
+    ws.append([])
+    ws.append(["Data", "Nota", "Transportadora", "Valor nota", "KG", "m3", "Frete"])
+    for row in _romaneio_rows(queryset):
+        ws.append(row)
+
+    buf = BytesIO()
+    wb.save(buf)
+    resp = HttpResponse(
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    resp["Content-Disposition"] = f'attachment; filename="romaneio_{_romaneio_filename(numero_romaneio)}.xlsx"'
+    return resp
+
+
+def exportar_romaneio_pdf(queryset, numero_romaneio):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(
+        buf, pagesize=landscape(A4), leftMargin=20, rightMargin=20,
+        topMargin=20, bottomMargin=20,
+    )
+    styles = getSampleStyleSheet()
+    data = [["Data", "Nota", "Transportadora", "Valor nota", "KG", "m3", "Frete"]]
+    data.extend(_romaneio_rows(queryset, prefixo_real=True))
+    table = Table(
+        data,
+        repeatRows=1,
+        colWidths=[70, 90, 190, 110, 80, 80, 80],
+    )
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+        ("ALIGN", (3, 1), (-1, -1), "RIGHT"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.white]),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story = [
+        Paragraph("Romaneio de Entrega", styles["Title"]),
+        Paragraph(f"Numero: {html.escape(str(numero_romaneio))}", styles["Heading2"]),
+        Spacer(1, 8),
+        table,
+    ]
+    doc.build(story)
+    resp = HttpResponse(buf.getvalue(), content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="romaneio_{_romaneio_filename(numero_romaneio)}.pdf"'
     return resp
 
 

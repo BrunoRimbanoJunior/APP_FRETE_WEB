@@ -27,6 +27,8 @@ from .exports import (
     exportar_pedido_excel,
     exportar_pedido_pdf,
     exportar_produtos_excel,
+    exportar_romaneio_excel,
+    exportar_romaneio_pdf,
 )
 from django.contrib.auth import get_user_model
 from .models import AuditLog
@@ -277,6 +279,43 @@ def relatorios_view(request):
 def relatorios_pdf_view(request):
     f = FreteCalculadoFilter(request.GET, queryset=FreteCalculado.objects.select_related("carrier").prefetch_related("pedidos").all())
     return exportar_fretes_pdf(f.qs)
+
+
+@permission_required('fretes.can_view_reports', raise_exception=True)
+def romaneio_view(request):
+    base_qs = FreteCalculado.objects.select_related("carrier").all()
+    filtro = FreteCalculadoFilter(request.GET, queryset=base_qs)
+    numero_romaneio = (request.GET.get("numero_romaneio") or "").strip()
+    selecionados = request.GET.getlist("notas")
+    export = (request.GET.get("export") or "").lower()
+    has_filters = any(request.GET.get(key) for key in ("carrier", "start_date", "end_date"))
+    resultados = filtro.qs if has_filters else base_qs.none()
+    erro = ""
+
+    if export:
+        if not numero_romaneio:
+            erro = "Informe o numero do romaneio."
+        elif not selecionados:
+            erro = "Selecione pelo menos uma nota para embarque."
+        else:
+            notas = resultados.filter(pk__in=selecionados).order_by("data_calculo", "id")
+            if not notas.exists():
+                erro = "As notas selecionadas nao pertencem ao filtro informado."
+            elif export == "xlsx":
+                return exportar_romaneio_excel(notas, numero_romaneio)
+            elif export == "pdf":
+                return exportar_romaneio_pdf(notas, numero_romaneio)
+            else:
+                erro = "Formato de exportacao invalido."
+
+    return render(request, "fretes/romaneio.html", {
+        "filter": filtro,
+        "resultados": resultados,
+        "numero_romaneio": numero_romaneio,
+        "selecionados": {str(pk) for pk in selecionados},
+        "has_filters": has_filters,
+        "erro": erro,
+    })
 
 def pedidos_autocomplete(request):
     q = request.GET.get("numero_pedido", "").strip()

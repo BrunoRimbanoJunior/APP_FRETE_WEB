@@ -17,6 +17,7 @@ urlpatterns = [
     # Relatórios
     path("relatorios/", views.relatorios_view, name="relatorios"),
     path("relatorios/pdf/", views.relatorios_pdf_view, name="relatorios_pdf"),
+    path("romaneio/", views.romaneio_view, name="romaneio"),
     # Produtos
     path("produtos/", views.produto_list, name="produto_list"),
     path("produtos/novo/", views.produto_create, name="produto_create"),
