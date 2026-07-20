@@ -1,7 +1,7 @@
 from datetime import date
 
 import pytest
-from django.contrib.auth.models import Permission, User
+from django.contrib.auth.models import Group, Permission, User
 from django.urls import reverse
 
 from fretes.models import Carrier, FreteCalculado
@@ -78,3 +78,13 @@ def test_romaneio_exige_permissao(client, frete):
     client.force_login(usuario)
     resposta = client.get(reverse("fretes:romaneio"))
     assert resposta.status_code == 403
+
+
+def test_grupo_expedicao_pode_acessar_romaneio(client, frete):
+    usuario = User.objects.create_user(username="expedicao", password="senha")
+    usuario.groups.add(Group.objects.get(name="expedicao"))
+
+    client.force_login(usuario)
+    resposta = client.get(reverse("fretes:romaneio"))
+
+    assert resposta.status_code == 200
