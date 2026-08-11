@@ -174,7 +174,7 @@ def exportar_produtos_excel(queryset):
     ws.title = "Produtos"
 
     headers = [
-        "Codigo", "Descricao", "Enderecos", "Peso bruto (kg)", "Peso liquido (kg)",
+        "Codigo", "RTG", "Descricao", "Enderecos", "Peso bruto (kg)", "Peso liquido (kg)",
         "Largura (cm)", "Altura (cm)", "Comprimento (cm)"
     ]
     ws.append(headers)
@@ -182,6 +182,7 @@ def exportar_produtos_excel(queryset):
     for produto in queryset:
         ws.append([
             produto.codigo,
+            produto.rtg,
             produto.descricao,
             produto.enderecos or "",
             _fmt_number_br(produto.peso_bruto_kg or 0),

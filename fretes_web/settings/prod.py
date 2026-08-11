@@ -1,13 +1,16 @@
 from pathlib import Path
 import os
 from urllib.parse import urlparse
+from django.core.exceptions import ImproperlyConfigured
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Project root (folder that contains manage.py and top-level 'static/')
 PROJECT_ROOT = BASE_DIR.parent
 
-SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-insecure-secret-key")
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY deve ser definida no ambiente de producao.")
 # DEBUG is true when DJANGO_DEBUG == "1"
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 LOGGING = {

@@ -112,6 +112,7 @@ class FreteCalculado(models.Model):
 # Novos cadastros
 class Produto(models.Model):
     codigo = models.CharField("Codigo", max_length=60, unique=True)
+    rtg = models.CharField("RTG", max_length=60, blank=True, db_index=True)
     descricao = models.CharField("Descricao", max_length=255)
     enderecos = models.CharField("Enderecos", max_length=1024, blank=True)
     peso_bruto_kg = models.DecimalField("Peso bruto (kg)", max_digits=10, decimal_places=3, default=0)

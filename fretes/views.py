@@ -339,7 +339,7 @@ def produto_list(request):
     descricao = request.GET.get("descricao", "").strip()
     qs = Produto.objects.all().order_by("codigo")
     if codigo:
-        qs = qs.filter(codigo__icontains=codigo)
+        qs = qs.filter(Q(codigo__icontains=codigo) | Q(rtg__icontains=codigo))
     if descricao:
         qs = qs.filter(descricao__icontains=descricao)
     if request.GET.get("export") == "xlsx":
@@ -378,7 +378,7 @@ def produtos_autocomplete(request):
     q = (request.GET.get("codigo") or request.GET.get("codigo_peca") or "").strip()
     qs = Produto.objects.all().order_by("codigo")
     if q:
-        qs = qs.filter(codigo__icontains=q)
+        qs = qs.filter(Q(codigo__icontains=q) | Q(rtg__icontains=q))
     qs = qs[:20]
     return render(request, "fretes/_produtos_datalist.html", {"qs": qs})
 
@@ -514,7 +514,7 @@ def produtos_options(request):
     q = _last_non_empty_param(request, "q", "codigo", "codigo_peca", suffixes=("-q",))
     qs = Produto.objects.all().order_by("codigo")
     if q:
-        qs = qs.filter(Q(codigo__icontains=q) | Q(descricao__icontains=q))
+        qs = qs.filter(Q(codigo__icontains=q) | Q(rtg__icontains=q) | Q(descricao__icontains=q))
     value = _last_non_empty_param(request, "codigo_peca", suffixes=("-codigo_peca",))
     return render(request, "fretes/_produto_options.html", {"qs": qs, "value": value})
 
@@ -741,6 +741,7 @@ def admin_import_produtos(request):
         # Aceita variações com/sem acentos e parênteses
         required = {
             "CODIGO": ["CODIGO"],
+            "RTG": ["RTG"],
             "DESCRICAO": ["DESCRICAO"],
             "APLICACAO": ["APLICACAO"],
             "PESO BRUTO": ["PESO BRUTO"],
@@ -756,12 +757,17 @@ def admin_import_produtos(request):
                     return alias
             return None
 
-        missing_keys = [k for k in required if not find_col(k)]
+        # RTG e opcional para manter compatibilidade com planilhas antigas.
+        has_rtg_column = find_col("RTG") is not None
+        missing_keys = [k for k in required if k != "RTG" and not find_col(k)]
         if missing_keys:
             msgs = ", ".join(missing_keys)
             messages.error(request, f"Colunas obrigatórias ausentes: {msgs}")
             return render(request, "fretes/import_produtos.html", context)
 
+        def _parse_decimal_value(v):
+            if v in (None, ""):
+                return Decimal("0")
             if isinstance(v, (int, float)):
                 return Decimal(str(v))
             s = str(v).strip()
@@ -804,16 +810,22 @@ def admin_import_produtos(request):
                     altura = _parse_decimal_value(val("ALTURA CM"))
                     comprimento = _parse_decimal_value(val("COMPRIMENTO CM"))
 
+                    defaults = {
+                        "descricao": descricao,
+                        "peso_bruto_kg": peso_bruto,
+                        "peso_liquido_kg": peso_liquido,
+                        "largura_cm": largura,
+                        "altura_cm": altura,
+                        "comprimento_cm": comprimento,
+                    }
+                    # Uma planilha antiga, sem a coluna RTG, nao deve apagar
+                    # um codigo RTG que ja esteja cadastrado.
+                    if has_rtg_column:
+                        defaults["rtg"] = str(val("RTG") or "").strip()
+
                     _, created = Produto.objects.update_or_create(
                         codigo=codigo,
-                        defaults={
-                            "descricao": descricao,
-                            "peso_bruto_kg": peso_bruto,
-                            "peso_liquido_kg": peso_liquido,
-                            "largura_cm": largura,
-                            "altura_cm": altura,
-                            "comprimento_cm": comprimento,
-                        },
+                        defaults=defaults,
                     )
                     if created:
                         criados += 1

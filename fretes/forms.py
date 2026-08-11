@@ -79,11 +79,12 @@ class ProdutoForm(ModelForm):
     class Meta:
         model = Produto
         fields = [
-            "codigo", "descricao", "enderecos", "peso_bruto_kg", "peso_liquido_kg",
+            "codigo", "rtg", "descricao", "enderecos", "peso_bruto_kg", "peso_liquido_kg",
             "largura_cm", "altura_cm", "comprimento_cm"
         ]
         widgets = {
             "codigo": forms.TextInput(attrs={"class": "form-control"}),
+            "rtg": forms.TextInput(attrs={"class": "form-control"}),
             "descricao": forms.TextInput(attrs={"class": "form-control"}),
             "enderecos": forms.TextInput(attrs={"class": "form-control", "placeholder": "Endereco 1, Endereco 2"}),
             "peso_bruto_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),

@@ -37,8 +37,8 @@
 
   <form method="get" class="row gy-2 gx-2 align-items-end mb-3">
     <div class="col-12 col-sm-6 col-md-4">
-      <label for="id_codigo" class="form-label">Filtrar por Codigo</label>
-      <input type="text" name="codigo" id="id_codigo" value="{{ codigo }}" class="form-control" placeholder="Codigo do produto">
+      <label for="id_codigo" class="form-label">Filtrar por Codigo ou RTG</label>
+      <input type="text" name="codigo" id="id_codigo" value="{{ codigo }}" class="form-control" placeholder="Codigo ou RTG do produto">
     </div>
     <div class="col-12 col-sm-6 col-md-4">
       <label for="id_descricao" class="form-label">Filtrar por descricao</label>
@@ -57,6 +57,7 @@
       <thead>
         <tr>
           <th>Codigo</th>
+          <th>RTG</th>
           <th>Descricao</th>
           <th>Enderecos</th>
           <th class="text-end">Acoes</th>
@@ -66,6 +67,7 @@
         {% for p in produtos %}
           <tr>
             <td>{{ p.codigo }}</td>
+            <td>{{ p.rtg|default:"-" }}</td>
             <td class="descricao-col" title="{{ p.descricao }}">{{ p.descricao }}</td>
             <td class="text-break">{{ p.enderecos|default:"-" }}</td>
             <td class="text-end">
@@ -73,7 +75,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="text-center">Sem produtos cadastrados.</td></tr>
+          <tr><td colspan="5" class="text-center">Sem produtos cadastrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>

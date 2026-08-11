@@ -39,8 +39,8 @@ class FreteCalculadoAdmin(admin.ModelAdmin):
 
 @admin.register(Produto)
 class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ("codigo", "descricao", "peso_bruto_kg", "peso_liquido_kg")
-    search_fields = ("codigo", "descricao")
+    list_display = ("codigo", "rtg", "descricao", "peso_bruto_kg", "peso_liquido_kg")
+    search_fields = ("codigo", "rtg", "descricao")
 
 
 @admin.register(Cliente)

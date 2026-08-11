@@ -1,6 +1,5 @@
 <datalist id="produtos-datalist">
   {% for p in qs %}
-    <option value="{{ p.codigo }}">{{ p.codigo }} - {{ p.descricao }}</option>
+    <option value="{{ p.codigo }}">{{ p.codigo }}{% if p.rtg %} | RTG: {{ p.rtg }}{% endif %} - {{ p.descricao }}</option>
   {% endfor %}
 </datalist>
-
