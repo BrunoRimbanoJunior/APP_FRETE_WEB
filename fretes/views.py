@@ -483,7 +483,10 @@ def garantia_create(request):
     if request.method == "POST":
         form = GarantiaForm(request.POST)
         if form.is_valid():
-            form.save()
+            garantia = form.save(commit=False)
+            garantia.criado_por = request.user
+            garantia.alterado_por = request.user
+            garantia.save()
             messages.success(request, "Garantia registrada com sucesso.")
             return redirect("fretes:garantia_list")
         else:
@@ -499,7 +502,9 @@ def garantia_update(request, pk: int):
     if request.method == "POST":
         form = GarantiaForm(request.POST, instance=garantia)
         if form.is_valid():
-            form.save()
+            garantia = form.save(commit=False)
+            garantia.alterado_por = request.user
+            garantia.save()
             messages.success(request, "Garantia atualizada.")
             return redirect("fretes:garantia_list")
         else:
@@ -579,6 +584,8 @@ def garantia_create_multi(request):
                         mao_de_obra=item.get("mao_de_obra") or False,
                         valor_mao_de_obra=item.get("valor_mao_de_obra") or 0,
                         tipo=(dados.get("tipo") or Garantia.TIPO_GARANTIA),
+                        criado_por=request.user,
+                        alterado_por=request.user,
                     )
                     created += 1
             messages.success(request, f"{created} produto(s) adicionados a garantia.")

@@ -52,9 +52,19 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Garantia)
 class GarantiaAdmin(admin.ModelAdmin):
-    list_display = ("id", "cliente", "codigo_peca", "marca", "nota_recebida", "nota_retorno", "data_recebimento", "data_retorno", "valor")
+    list_display = (
+        "id", "cliente", "codigo_peca", "marca", "nota_recebida", "nota_retorno",
+        "data_recebimento", "data_retorno", "valor", "criado_por", "alterado_por",
+    )
     search_fields = ("codigo_peca", "marca", "nota_recebida", "nota_retorno", "cliente__nome", "cliente__cnpj")
     list_filter = ("data_recebimento", "data_retorno")
+    readonly_fields = ("criado_por", "alterado_por")
+
+    def save_model(self, request, obj, form, change):
+        if not obj.criado_por_id:
+            obj.criado_por = request.user
+        obj.alterado_por = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(AuditLog)

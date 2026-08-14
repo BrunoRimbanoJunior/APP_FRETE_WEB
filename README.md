@@ -72,3 +72,20 @@ Backups gerados pelo serviço `auto-backup` ficam em `./backups` (mapeado para `
 - Use sempre extensões minúsculas: `.png`, `.jpg`, `.jpeg`, `.svg`, `.gif`, `.webp`.
 - Evite arquivos duplicados que diferem só por maiúsculas/minúsculas.
 - O CI (workflow “Lint Static Assets”) falha o PR/push caso encontre extensões em maiúsculas ou duplicatas por case.
+
+## COMANDOS DOCKER
+# Backup antes da atualização
+docker compose exec -T auto-backup /usr/local/bin/backup.sh
+
+# Atualizar imagens externas
+docker compose pull db nginx auto-backup
+
+# Reconstruir a imagem Django usando a base mais recente
+docker compose build --pull web
+
+# Recriar e iniciar os serviços
+docker compose up -d --remove-orphans db web nginx auto-backup
+
+# Conferir o estado
+docker compose ps
+docker compose logs --tail 100 web

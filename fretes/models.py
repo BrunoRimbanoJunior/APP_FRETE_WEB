@@ -1,6 +1,7 @@
 ﻿
 from decimal import Decimal
 from datetime import date, datetime
+from django.conf import settings
 from django.db import models
 from django.db.models.signals import post_save, post_delete, pre_save
 from django.dispatch import receiver
@@ -179,6 +180,24 @@ class Garantia(models.Model):
     mao_de_obra = models.BooleanField("Com mao de obra", default=False)
     valor_mao_de_obra = models.DecimalField("Valor mao de obra", max_digits=12, decimal_places=2, default=0)
     tipo = models.CharField("Tipo", max_length=16, choices=TIPOS, default=TIPO_GARANTIA)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Criado por",
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="garantias_criadas",
+    )
+    alterado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="Alterado por",
+        null=True,
+        blank=True,
+        editable=False,
+        on_delete=models.SET_NULL,
+        related_name="garantias_alteradas",
+    )
 
     class Meta:
         ordering = ["-data_recebimento", "-id"]
@@ -243,6 +262,8 @@ class AuditLog(models.Model):
 
 
 def _serialize_change_value(value):
+    if isinstance(value, models.Model):
+        return value.pk
     if isinstance(value, Decimal):
         return float(value)
     if isinstance(value, (datetime, date)):
@@ -268,9 +289,9 @@ def _log_model_action(instance, action):
         if action == "update" and hasattr(instance, "_original_state"):
             changes = {}
             for k, old in instance._original_state.items():
-                new = getattr(instance, k, None)
+                new = _serialize_change_value(getattr(instance, k, None))
                 if old != new:
-                    changes[k] = [_serialize_change_value(old), _serialize_change_value(new)]
+                    changes[k] = [old, new]
             if not changes:
                 changes = None
     except Exception:
