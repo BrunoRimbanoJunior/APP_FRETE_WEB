@@ -89,3 +89,7 @@ docker compose up -d --remove-orphans db web nginx auto-backup
 # Conferir o estado
 docker compose ps
 docker compose logs --tail 100 web
+
+## Reconstrução Completa
+docker compose build --no-cache --pull web
+docker compose up -d --remove-orphans db web nginx auto-backup
