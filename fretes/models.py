@@ -130,6 +130,7 @@ class Produto(models.Model):
             ("can_import_products", "Pode importar produtos"),
             ("can_import_clients", "Pode importar clientes"),
             ("can_view_reports", "Pode acessar relatorios"),
+            ("can_view_warranty_management", "Pode acessar o gerencial de garantias"),
             ("can_use_calcular", "Pode usar a ferramenta Calcular"),
         )
 

@@ -9,6 +9,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+from .models import Produto
 
 # Helpers de formatação pt-BR
 def _fmt_number_br(value) -> str:
@@ -525,23 +526,34 @@ def exportar_garantias_pdf(queryset):
 
 
 # ---------------- Garantias (Relatorio Gerencial) ----------------
+def _descricoes_por_codigo(rows):
+    codigos = [row["codigo_peca"] for row in rows]
+    return dict(
+        Produto.objects.filter(codigo__in=codigos).values_list("codigo", "descricao")
+    )
+
+
 def exportar_garantias_gerencial_excel(queryset):
     wb = Workbook()
     ws = wb.active
     ws.title = "Gerencial"
 
-    headers = ["Cod. Peca", "Quantidade", "Valor"]
+    headers = ["Cod. Peca", "Descricao", "Quantidade", "Valor"]
     ws.append(headers)
-    for row in (
+    rows = list(
         queryset.values("codigo_peca")
         .annotate(total_q=Sum("quantidade"), total_v=Sum("valor"))
         .order_by("-total_q", "codigo_peca")
-    ):
+    )
+    descricoes = _descricoes_por_codigo(rows)
+    for row in rows:
         ws.append([
             row["codigo_peca"],
+            descricoes.get(row["codigo_peca"], ""),
             _fmt_int_br(row["total_q"] or 0),
             _fmt_number_br(row["total_v"] or 0),
         ])
+    ws.column_dimensions["B"].width = 45
 
     buf = BytesIO()
     wb.save(buf)
@@ -619,20 +631,22 @@ def exportar_garantias_gerencial_pdf(queryset):
         .annotate(total_q=Sum("quantidade"), total_v=Sum("valor"))
         .order_by("-total_q", "codigo_peca")
     )
-    produtos_table_data = [["Cod. Peca", "Quantidade", "Valor"]]
+    descricoes = _descricoes_por_codigo(prod_rows)
+    produtos_table_data = [["Cod. Peca", "Descricao", "Quantidade", "Valor"]]
     for r in prod_rows:
         produtos_table_data.append([
             Paragraph(html.escape(str(r["codigo_peca"]) or ""), styles["BodyText"]),
+            Paragraph(html.escape(descricoes.get(r["codigo_peca"], "")), styles["BodyText"]),
             _fmt_int_br(r["total_q"] or 0),
             _fmt_number_br(r["total_v"] or 0),
         ])
-    produtos_table = Table(produtos_table_data, repeatRows=1, colWidths=[260, 120, 120])
+    produtos_table = Table(produtos_table_data, repeatRows=1, colWidths=[90, 250, 80, 110])
     produtos_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("ALIGN", (1, 1), (-1, -1), "RIGHT"),
+        ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
     ]))
 
     story = [title, Spacer(1, 10),

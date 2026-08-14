@@ -21,7 +21,9 @@
           <a class="menu-link" href="{% url 'fretes:produto_list' %}">PRODUTOS</a>
           <a class="menu-link" href="{% url 'fretes:cliente_list' %}">CLIENTES</a>
           <a class="menu-link" href="{% url 'fretes:garantia_list' %}">GARANTIAS</a>
+          {% if perms.fretes.can_view_warranty_management %}
           <a class="menu-link" href="{% url 'fretes:garantias_gerencial' %}">GERENCIAL</a>
+          {% endif %}
           <div class="cfg-dropdown">
             <a class="menu-link" href="#">CONFIG <span class="caret">&#9662;</span></a>
             <div class="cfg-menu">

@@ -606,7 +606,7 @@ def garantia_create_multi(request):
 
 
 # Relatorio Gerencial de Garantias
-@permission_required('fretes.can_view_reports', raise_exception=True)
+@permission_required('fretes.can_view_warranty_management', raise_exception=True)
 def garantias_gerencial_view(request):
     start_date = (request.GET.get("start_date") or "").strip()
     end_date = (request.GET.get("end_date") or "").strip()
@@ -629,10 +629,14 @@ def garantias_gerencial_view(request):
     if export == "pdf":
         return exportar_garantias_gerencial_pdf(qs)
 
-    produtos_qs = (
+    produtos_qs = list(
         qs.values("codigo_peca")
         .annotate(total_quantidade=Sum("quantidade"), total_valor=Sum("valor"))
         .order_by("-total_quantidade", "codigo_peca")
+    )
+    descricoes = dict(
+        Produto.objects.filter(codigo__in=[p["codigo_peca"] for p in produtos_qs])
+        .values_list("codigo", "descricao")
     )
 
     # Qtd por marca (apenas para exibir no HTML de forma resumida)
@@ -654,6 +658,7 @@ def garantias_gerencial_view(request):
         summary = "; ".join(f"{it['marca']}: {it['qtd']}" for it in items) if items else "-"
         produtos.append({
             "codigo_peca": codigo,
+            "descricao": descricoes.get(codigo, ""),
             "total_quantidade": r["total_quantidade"],
             "total_valor": r["total_valor"],
             "brand_summary": summary,
@@ -675,7 +680,7 @@ def garantias_gerencial_view(request):
     return render(request, "fretes/garantias_gerencial.html", context)
 
 
-@permission_required('fretes.can_view_reports', raise_exception=True)
+@permission_required('fretes.can_view_warranty_management', raise_exception=True)
 def garantias_gerencial_produto_view(request, codigo_peca: str):
     start_date = (request.GET.get("start_date") or "").strip()
     end_date = (request.GET.get("end_date") or "").strip()

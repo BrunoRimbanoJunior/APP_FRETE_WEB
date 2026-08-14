@@ -47,6 +47,7 @@
       <thead>
         <tr>
           <th>Cod. Peca</th>
+          <th>Descricao</th>
           <th>Quantidade</th>
           <th>Valor</th>
           <th>Qtd por Marca</th>
@@ -60,12 +61,13 @@
                 {{ p.codigo_peca }}
               </a>
             </td>
+            <td>{{ p.descricao|default:"-" }}</td>
             <td>{{ p.total_quantidade }}</td>
             <td>{{ p.total_valor }}</td>
             <td>{{ p.brand_summary }}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="text-center">Sem dados para o filtro informado.</td></tr>
+          <tr><td colspan="5" class="text-center">Sem dados para o filtro informado.</td></tr>
         {% endfor %}
       </tbody>
     </table>
