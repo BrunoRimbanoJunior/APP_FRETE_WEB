@@ -11,6 +11,7 @@ from openpyxl import load_workbook
 from django.utils import timezone
 from django.contrib import messages
 from django.db.models import Q, Sum
+from django.core.paginator import Paginator
 from .models import Pedido, PedidoVolume, Carrier, FreteCalculado, Produto, Cliente, Garantia
 from .forms import CalcularFreteForm, PedidoForm, PedidoVolumeForm, ProdutoForm, ClienteForm, GarantiaForm, GarantiaHeaderForm, GarantiaItemForm
 from .filters import FreteCalculadoFilter
@@ -33,6 +34,21 @@ from .exports import (
 from django.contrib.auth import get_user_model
 from .models import AuditLog
 from django.utils.dateparse import parse_date
+
+
+LIST_PAGE_SIZE = 50
+AUTOCOMPLETE_LIMIT = 20
+
+
+def _paginate(request, queryset, per_page=LIST_PAGE_SIZE):
+    return Paginator(queryset, per_page).get_page(request.GET.get("page"))
+
+
+def _selected_product_queryset(value):
+    value = (value or "").strip()
+    if not value:
+        return Produto.objects.none()
+    return Produto.objects.filter(codigo=value).only("codigo", "rtg", "descricao")
 
 def _last_non_empty_param(request, *keys, suffixes=()):
     querydict = request.GET
@@ -201,17 +217,22 @@ def pedido_list(request):
     q = request.GET.get("q", "").strip()
     pedidos = (
         Pedido.objects.select_related("carrier")
-        .prefetch_related("volumes")
         .annotate(total_volumes=Sum("volumes__quantidade"))
         .order_by("-id")
     )
     if q:
         pedidos = pedidos.filter(numero_pedido__icontains=q)
-    count = pedidos.count()
+    page_obj = _paginate(request, pedidos)
     return render(
         request,
         "fretes/pedidos_list.html",
-        {"pedidos": pedidos, "q": q, "count": count, "has_filter": bool(q)},
+        {
+            "pedidos": page_obj.object_list,
+            "page_obj": page_obj,
+            "q": q,
+            "count": page_obj.paginator.count,
+            "has_filter": bool(q),
+        },
     )
 
 
@@ -273,7 +294,12 @@ def relatorios_view(request):
         return exportar_fretes_excel(f.qs)
     if export == "pdf":
         return exportar_fretes_pdf(f.qs)
-    return render(request, "fretes/relatorios.html", {"filter": f})
+    page_obj = _paginate(request, f.qs)
+    return render(
+        request,
+        "fretes/relatorios.html",
+        {"filter": f, "fretes": page_obj.object_list, "page_obj": page_obj},
+    )
 
 @permission_required('fretes.can_view_reports', raise_exception=True)
 def relatorios_pdf_view(request):
@@ -325,12 +351,22 @@ def romaneio_view(request):
     })
 
 def pedidos_autocomplete(request):
-    q = request.GET.get("numero_pedido", "").strip()
-    qs = Pedido.objects.all().order_by("-id")
-    if q:
-        qs = qs.filter(numero_pedido__icontains=q)
-    qs = qs[:20]
-    return render(request, "fretes/_pedidos_datalist.html", {"qs": qs})
+    raw_value = request.GET.get("numero_pedido", "")
+    prefix, separator, q = raw_value.rpartition(",")
+    q = q.strip()
+    qs = Pedido.objects.none()
+    if len(q) >= 2:
+        qs = (
+            Pedido.objects.select_related("carrier")
+            .filter(numero_pedido__icontains=q)
+            .order_by("-id")[:AUTOCOMPLETE_LIMIT]
+        )
+    value_prefix = f"{prefix}{separator} " if separator else ""
+    return render(
+        request,
+        "fretes/_pedidos_datalist.html",
+        {"qs": qs, "value_prefix": value_prefix},
+    )
 
 
 # Produtos
@@ -344,7 +380,17 @@ def produto_list(request):
         qs = qs.filter(descricao__icontains=descricao)
     if request.GET.get("export") == "xlsx":
         return exportar_produtos_excel(qs)
-    return render(request, "fretes/produtos_list.html", {"produtos": qs, "codigo": codigo, "descricao": descricao})
+    page_obj = _paginate(request, qs)
+    return render(
+        request,
+        "fretes/produtos_list.html",
+        {
+            "produtos": page_obj.object_list,
+            "page_obj": page_obj,
+            "codigo": codigo,
+            "descricao": descricao,
+        },
+    )
 
 
 @permission_required('fretes.add_produto', raise_exception=True)
@@ -376,10 +422,13 @@ def produto_update(request, pk: int):
 
 def produtos_autocomplete(request):
     q = (request.GET.get("codigo") or request.GET.get("codigo_peca") or "").strip()
-    qs = Produto.objects.all().order_by("codigo")
-    if q:
-        qs = qs.filter(Q(codigo__icontains=q) | Q(rtg__icontains=q))
-    qs = qs[:20]
+    qs = Produto.objects.none()
+    if len(q) >= 2:
+        qs = (
+            Produto.objects.filter(Q(codigo__icontains=q) | Q(rtg__icontains=q))
+            .only("codigo", "rtg", "descricao")
+            .order_by("codigo")[:AUTOCOMPLETE_LIMIT]
+        )
     return render(request, "fretes/_produtos_datalist.html", {"qs": qs})
 
 
@@ -402,7 +451,17 @@ def cliente_list(request):
         qs = qs.filter(cnpj__icontains=cnpj)
     if nome:
         qs = qs.filter(nome__icontains=nome)
-    return render(request, "fretes/clientes_list.html", {"clientes": qs, "cnpj": cnpj, "nome": nome})
+    page_obj = _paginate(request, qs)
+    return render(
+        request,
+        "fretes/clientes_list.html",
+        {
+            "clientes": page_obj.object_list,
+            "page_obj": page_obj,
+            "cnpj": cnpj,
+            "nome": nome,
+        },
+    )
 
 
 @permission_required('fretes.add_cliente', raise_exception=True)
@@ -466,8 +525,11 @@ def garantia_list(request):
     if export == "pdf":
         return exportar_garantias_pdf(qs)
 
+    page_obj = _paginate(request, qs)
+
     context = {
-        "garantias": qs,
+        "garantias": page_obj.object_list,
+        "page_obj": page_obj,
         "nota": nota,
         "cnpj": cnpj,
         "nome": nome,
@@ -493,7 +555,7 @@ def garantia_create(request):
             messages.error(request, "Corrija os erros do formulário.")
     else:
         form = GarantiaForm()
-    produtos = Produto.objects.all().order_by("codigo")
+    produtos = _selected_product_queryset(form.data.get("codigo_peca") if form.is_bound else "")
     return render(request, "fretes/garantias_form.html", {"form": form, "is_new": True, "produtos": produtos})
 
 
@@ -511,31 +573,63 @@ def garantia_update(request, pk: int):
             messages.error(request, "Corrija os erros do formulário.")
     else:
         form = GarantiaForm(instance=garantia)
-    produtos = Produto.objects.all().order_by("codigo")
+    codigo_selecionado = form.data.get("codigo_peca") if form.is_bound else garantia.codigo_peca
+    produtos = _selected_product_queryset(codigo_selecionado)
     return render(request, "fretes/garantias_form2.html", {"form": form, "is_new": False, "garantia": garantia, "produtos": produtos})
 
 
 def produtos_options(request):
-    q = _last_non_empty_param(request, "q", "codigo", "codigo_peca", suffixes=("-q",))
-    qs = Produto.objects.all().order_by("codigo")
-    if q:
-        qs = qs.filter(Q(codigo__icontains=q) | Q(rtg__icontains=q) | Q(descricao__icontains=q))
+    q = _last_non_empty_param(request, "q", suffixes=("-q",))
     value = _last_non_empty_param(request, "codigo_peca", suffixes=("-codigo_peca",))
-    return render(request, "fretes/_produto_options.html", {"qs": qs, "value": value})
+    resultados = []
+    if len(q) >= 2:
+        resultados = list(
+            Produto.objects.filter(
+                Q(codigo__icontains=q) | Q(rtg__icontains=q) | Q(descricao__icontains=q)
+            )
+            .only("codigo", "rtg", "descricao")
+            .order_by("codigo")[:AUTOCOMPLETE_LIMIT]
+        )
+    selecionado = (
+        Produto.objects.filter(codigo=value).only("codigo", "rtg", "descricao").first()
+        if value
+        else None
+    )
+    if selecionado and all(item.codigo != selecionado.codigo for item in resultados):
+        resultados.insert(0, selecionado)
+    return render(
+        request,
+        "fretes/_produto_options.html",
+        {"qs": resultados, "value": value},
+    )
 
 def clientes_options(request):
-    q = _last_non_empty_param(request, "q", "cnpj", "nome")
-    qs = Cliente.objects.all().order_by("nome")
-    if q:
-        qs = qs.filter(Q(cnpj__icontains=q) | Q(nome__icontains=q))
+    q = _last_non_empty_param(request, "q")
     value = request.GET.get("cliente", "")
-    return render(request, "fretes/_cliente_options.html", {"qs": qs, "value": value})
+    resultados = []
+    if len(q) >= 2:
+        resultados = list(
+            Cliente.objects.filter(Q(cnpj__icontains=q) | Q(nome__icontains=q))
+            .only("id", "nome", "cnpj")
+            .order_by("nome")[:AUTOCOMPLETE_LIMIT]
+        )
+    selecionado = (
+        Cliente.objects.filter(pk=value).only("id", "nome", "cnpj").first()
+        if str(value).isdigit()
+        else None
+    )
+    if selecionado and all(item.pk != selecionado.pk for item in resultados):
+        resultados.insert(0, selecionado)
+    return render(
+        request,
+        "fretes/_cliente_options.html",
+        {"qs": resultados, "value": value},
+    )
 
 
 @permission_required('fretes.add_garantia', raise_exception=True)
 def garantia_create_multi(request):
-    produtos_qs = Produto.objects.all().order_by("codigo")
-    produto_choices = [(p.codigo, f"{p.codigo} - {p.descricao}") for p in produtos_qs]
+    produtos_qs = Produto.objects.none()
 
     if request.method == "POST":
         header_form = GarantiaHeaderForm(request.POST)
@@ -551,7 +645,6 @@ def garantia_create_multi(request):
         cleaned_items = []
         for idx, data in enumerate(items_data, start=1):
             item_form = GarantiaItemForm(data)
-            item_form.fields["codigo_peca"].choices = produto_choices
             if item_form.is_valid():
                 cleaned_items.append(item_form.cleaned_data)
             else:
@@ -629,19 +722,25 @@ def garantias_gerencial_view(request):
     if export == "pdf":
         return exportar_garantias_gerencial_pdf(qs)
 
-    produtos_qs = list(
+    produtos_qs = (
         qs.values("codigo_peca")
         .annotate(total_quantidade=Sum("quantidade"), total_valor=Sum("valor"))
         .order_by("-total_quantidade", "codigo_peca")
     )
+    page_obj = _paginate(request, produtos_qs)
+    produtos_pagina = list(page_obj.object_list)
+    codigos_pagina = [p["codigo_peca"] for p in produtos_pagina]
     descricoes = dict(
-        Produto.objects.filter(codigo__in=[p["codigo_peca"] for p in produtos_qs])
+        Produto.objects.filter(codigo__in=codigos_pagina)
         .values_list("codigo", "descricao")
     )
 
     # Qtd por marca (apenas para exibir no HTML de forma resumida)
     breakdown_raw = list(
-        qs.values("codigo_peca", "marca").annotate(qtd=Sum("quantidade")).order_by()
+        qs.filter(codigo_peca__in=codigos_pagina)
+        .values("codigo_peca", "marca")
+        .annotate(qtd=Sum("quantidade"))
+        .order_by()
     )
     by_prod_brand = {}
     for r in breakdown_raw:
@@ -652,7 +751,7 @@ def garantias_gerencial_view(request):
         by_prod_brand[key].sort(key=lambda x: (-x["qtd"], str(x["marca"]).lower()))
 
     produtos = []
-    for r in produtos_qs:
+    for r in produtos_pagina:
         codigo = r["codigo_peca"]
         items = by_prod_brand.get(codigo, [])
         summary = "; ".join(f"{it['marca']}: {it['qtd']}" for it in items) if items else "-"
@@ -663,13 +762,15 @@ def garantias_gerencial_view(request):
             "total_valor": r["total_valor"],
             "brand_summary": summary,
         })
+    page_obj.object_list = produtos
 
     marcas = (
         Garantia.objects.values_list("marca", flat=True).distinct().order_by("marca")
     )
 
     context = {
-        "produtos": produtos,
+        "produtos": page_obj.object_list,
+        "page_obj": page_obj,
         "by_prod_brand": by_prod_brand,
         "start_date": start_date,
         "end_date": end_date,
@@ -708,10 +809,12 @@ def garantias_gerencial_produto_view(request, codigo_peca: str):
         return exportar_garantias_gerencial_produto_pdf(qs, codigo_peca)
 
     totals = qs.aggregate(total_q=Sum("quantidade"), total_v=Sum("valor"))
+    page_obj = _paginate(request, qs)
 
     context = {
         "codigo_peca": codigo_peca,
-        "garantias": qs,
+        "garantias": page_obj.object_list,
+        "page_obj": page_obj,
         "total_q": totals.get("total_q") or 0,
         "total_v": totals.get("total_v") or 0,
         "start_date": start_date,
@@ -967,10 +1070,17 @@ def audit_log_view(request):
     if end_date:
         qs = qs.filter(created_at__date__lte=parse_date(end_date))
     if q:
-        qs = qs.filter(object_repr__icontains=q) | qs.filter(path__icontains=q) | qs.filter(username__icontains=q)
+        qs = qs.filter(
+            Q(object_repr__icontains=q)
+            | Q(path__icontains=q)
+            | Q(username__icontains=q)
+        )
+
+    page_obj = _paginate(request, qs)
 
     return render(request, 'fretes/auditoria.html', {
-        'logs': qs[:500],
+        'logs': page_obj.object_list,
+        'page_obj': page_obj,
         'users': users,
         'user_id': user_id or '',
         'action': action,

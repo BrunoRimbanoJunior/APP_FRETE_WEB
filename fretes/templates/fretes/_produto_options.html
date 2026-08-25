@@ -1,3 +1,4 @@
+<option value="">-- selecione --</option>
 {% for p in qs %}
   {% if value and value == p.codigo %}
     <option value="{{ p.codigo }}" selected>{{ p.codigo }}{% if p.rtg %} | RTG: {{ p.rtg }}{% endif %} - {{ p.descricao }}</option>

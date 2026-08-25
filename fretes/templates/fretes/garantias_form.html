@@ -1,4 +1,5 @@
 {% extends "fretes/base.html" %}
+{% block extra_head %}{% include "fretes/_htmx_head.html" %}{% endblock %}
 {% block title %}{% if is_new %}Nova{% else %}Editar{% endif %} Garantia{% endblock %}
 {% block content %}
 <div class="container" style="max-width: 800px;">
@@ -20,7 +21,7 @@
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar cliente</label>
       <div class="col-sm-9 d-flex gap-2">
-        <input type="text" id="cliente-search" class="form-control" placeholder="CNPJ ou nome">
+        <input type="search" id="cliente-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
                 class="btn btn-outline-secondary"
                 hx-get="{% url 'fretes:clientes_options' %}"
@@ -49,7 +50,7 @@
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar produto</label>
       <div class="col-sm-9 d-flex gap-2">
-        <input type="text" id="produto-search" class="form-control" placeholder="Codigo ou descricao">
+        <input type="search" id="produto-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
                 class="btn btn-outline-secondary"
                 hx-get="{% url 'fretes:produtos_options' %}"

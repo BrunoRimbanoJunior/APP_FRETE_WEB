@@ -48,7 +48,7 @@
           </tr>
         </thead>
         <tbody>
-        {% for f in filter.qs %}
+        {% for f in fretes %}
           <tr>
             <td>{{ f.data_calculo }}</td>
             <td>
@@ -76,7 +76,7 @@
         </tbody>
       </table>
     </div>
+    {% include "fretes/_pagination.html" %}
   </div>
 </div>
 {% endblock %}
-

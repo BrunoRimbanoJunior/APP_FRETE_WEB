@@ -93,3 +93,10 @@ docker compose logs --tail 100 web
 ## Reconstrução Completa
 docker compose build --no-cache --pull web
 docker compose up -d --remove-orphans db web nginx auto-backup
+
+## Desempenho em dispositivos mobile
+
+- As listagens principais usam paginacao no servidor com 50 registros por pagina.
+- As buscas de clientes e produtos em Garantias exigem 2 caracteres e retornam no maximo 20 opcoes.
+- O Nginx comprime respostas HTML/CSS/JS e a logo possui uma versao otimizada para exibicao.
+- Depois de atualizar, aplique a migracao `0020_performance_indexes` e reconstrua os containers web e nginx.

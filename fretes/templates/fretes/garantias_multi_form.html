@@ -1,5 +1,6 @@
 ﻿{% extends "fretes/base.html" %}
 {% load static %}
+{% block extra_head %}{% include "fretes/_htmx_head.html" %}{% endblock %}
 {% block title %}Nova Garantia{% endblock %}
 {% block content %}
 <div class="container" style="max-width: 1000px;">
@@ -31,7 +32,7 @@
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar cliente</label>
       <div class="col-sm-9 d-flex gap-2">
-        <input type="text" id="cliente-search" name="q" class="form-control" placeholder="CNPJ ou nome">
+        <input type="search" id="cliente-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
                 class="btn btn-outline-secondary"
                 hx-get="{% url 'fretes:clientes_options' %}"
@@ -70,7 +71,7 @@
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Buscar produto</label>
           <div class="col-sm-9 d-flex gap-2">
-            <input type="text" class="form-control" id="produto-search" name="q" placeholder="Codigo ou descricao">
+            <input type="search" class="form-control" id="produto-search" name="q" minlength="2" placeholder="Digite ao menos 2 caracteres">
             <button type="button"
                     class="btn btn-outline-secondary"
                     hx-get="{% url 'fretes:produtos_options' %}"
@@ -87,7 +88,7 @@
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Codigo da peca</label>
           <div class="col-sm-9">
-            <select id="id_item_codigo_peca" class="form-select">
+            <select id="id_item_codigo_peca" name="codigo_peca" class="form-select">
               {% include 'fretes/_produto_options.html' with qs=produtos value='' %}
             </select>
           </div>

@@ -136,6 +136,23 @@ class GarantiaForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        cliente_id = None
+        if self.is_bound:
+            cliente_id = self.data.get(self.add_prefix("cliente"))
+        elif self.instance and getattr(self.instance, "cliente_id", None):
+            cliente_id = self.instance.cliente_id
+        elif self.initial.get("cliente"):
+            cliente_id = getattr(self.initial["cliente"], "pk", self.initial["cliente"])
+
+        # Evita renderizar milhares de clientes no primeiro carregamento. A
+        # busca HTMX inclui os resultados sob demanda e o selecionado continua
+        # disponivel em edicoes e em formularios POST invalidos.
+        cliente_valido = cliente_id and str(cliente_id).isdigit()
+        self.fields["cliente"].queryset = (
+            Cliente.objects.filter(pk=cliente_id)
+            if cliente_valido
+            else Cliente.objects.none()
+        )
         self.fields["data_recebimento"].input_formats = ["%Y-%m-%d", "%d/%m/%Y"]
         if self.instance and getattr(self.instance, "data_recebimento", None):
             self.initial.setdefault("data_recebimento", self.instance.data_recebimento)
@@ -178,7 +195,7 @@ class GarantiaHeaderForm(forms.Form):
     )
     cliente = forms.ModelChoiceField(
         label="Cliente",
-        queryset=Cliente.objects.all(),
+        queryset=Cliente.objects.none(),
         required=True,
         error_messages={"required": "Selecione um cliente."},
         widget=forms.Select(attrs={"class": "form-select", "id": "id_cliente"}),
@@ -199,9 +216,23 @@ class GarantiaHeaderForm(forms.Form):
         widget=forms.Select(attrs={"class": "form-select"}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        cliente_id = None
+        if self.is_bound:
+            cliente_id = self.data.get(self.add_prefix("cliente"))
+        elif self.initial.get("cliente"):
+            cliente_id = getattr(self.initial["cliente"], "pk", self.initial["cliente"])
+        cliente_valido = cliente_id and str(cliente_id).isdigit()
+        self.fields["cliente"].queryset = (
+            Cliente.objects.filter(pk=cliente_id)
+            if cliente_valido
+            else Cliente.objects.none()
+        )
+
 
 class GarantiaItemForm(forms.Form):
-    codigo_peca = forms.ChoiceField(label="Codigo da peca", choices=(), widget=forms.Select(attrs={"class": "form-select"}))
+    codigo_peca = forms.CharField(label="Codigo da peca")
     marca = forms.CharField(label="Marca", widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Marca da peca"}))
     numero_lote = forms.CharField(label="Numero do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
     defeito = forms.CharField(label="Defeito", widget=forms.Textarea(attrs={"class": "form-control", "rows": 2}))

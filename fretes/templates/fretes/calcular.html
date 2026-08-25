@@ -1,4 +1,5 @@
 {% extends "fretes/base.html" %}
+{% block extra_head %}{% include "fretes/_htmx_head.html" %}{% endblock %}
 {% block title %}Calcular Frete{% endblock %}
 {% block content %}
 <style>
@@ -57,7 +58,7 @@
                     placeholder="Ex.: 12345, 12346, 12347"
                     list="pedidos-datalist"
                     hx-get="{% url 'fretes:pedidos_autocomplete' %}"
-                    hx-trigger="keyup changed delay:200ms"
+                    hx-trigger="keyup changed delay:350ms"
                     hx-target="#pedidos-datalist"
                     hx-swap="outerHTML"
                     hx-include="[name='numero_pedido']"

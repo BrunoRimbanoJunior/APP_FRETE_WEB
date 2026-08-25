@@ -104,6 +104,10 @@ class FreteCalculado(models.Model):
         ordering = ["-id"]
         verbose_name = "Frete Calculado"
         verbose_name_plural = "Fretes Calculados"
+        indexes = [
+            models.Index(fields=["data_calculo"], name="frete_data_calculo_idx"),
+            models.Index(fields=["tipo_frete"], name="frete_tipo_idx"),
+        ]
         # Removido constraint antigo de (numero_pedido, carrier) para permitir multi-pedido por nota
 
     def __str__(self) -> str:
@@ -151,6 +155,9 @@ class Cliente(models.Model):
         ordering = ["nome"]
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
+        indexes = [
+            models.Index(fields=["nome"], name="cliente_nome_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.nome} ({self.cnpj})"
@@ -204,6 +211,12 @@ class Garantia(models.Model):
         ordering = ["-data_recebimento", "-id"]
         verbose_name = "Garantia"
         verbose_name_plural = "Garantias"
+        indexes = [
+            models.Index(fields=["data_recebimento"], name="garantia_data_idx"),
+            models.Index(fields=["tipo"], name="garantia_tipo_idx"),
+            models.Index(fields=["marca"], name="garantia_marca_idx"),
+            models.Index(fields=["codigo_peca"], name="garantia_codigo_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"Garantia {self.id} - {self.cliente}"
@@ -257,6 +270,11 @@ class AuditLog(models.Model):
         ordering = ["-created_at", "-id"]
         verbose_name = "Log de Auditoria"
         verbose_name_plural = "Logs de Auditoria"
+        indexes = [
+            models.Index(fields=["created_at"], name="audit_created_idx"),
+            models.Index(fields=["action"], name="audit_action_idx"),
+            models.Index(fields=["module"], name="audit_module_idx"),
+        ]
 
     def __str__(self) -> str:
         return f"{self.created_at} {self.username} {self.action} {self.object_type}#{self.object_id}"
