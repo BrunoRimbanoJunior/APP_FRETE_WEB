@@ -1,19 +1,12 @@
 {% extends "fretes/base.html" %}
 {% block title %}Pedidos{% endblock %}
 {% block content %}
-<style>
-    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .actions { white-space: nowrap; }
-    @media (max-width: 600px) { .filter-row { flex-direction: column; gap: 8px; align-items: stretch !important; } }
-    .w-240 { width: 240px; }
-    .w-160 { width: 160px; }
-</style>
 <div class="container">
-    <div class="d-flex filter-row" style="justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div class="d-flex mobile-stack align-items-end justify-content-between gap-3 mb-3 flex-wrap">
         <h5 class="m-0">Pedidos</h5>
-        <form method="get" class="d-flex gap-2">
-            <input type="text" name="q" value="{{ q }}" class="form-control w-240" placeholder="Filtrar por nº do pedido">
-            <button class="btn btn-outline-secondary w-160" type="submit">Filtrar</button>
+        <form method="get" class="d-flex mobile-stack gap-2">
+            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Filtrar por nº do pedido" aria-label="Filtrar por número do pedido">
+            <button class="btn btn-outline-secondary" type="submit">Filtrar</button>
         </form>
         <a class="btn btn-primary" href="{% url 'fretes:pedido_create' %}">Novo Pedido</a>
     </div>
@@ -23,7 +16,7 @@
     {% endif %}
 
     <div class="table-responsive">
-        <table class="table table-striped table-sm">
+        <table class="table mobile-table table-striped table-sm">
             <thead>
                 <tr>
                     <th>#</th>
@@ -38,13 +31,13 @@
             <tbody>
                 {% for p in pedidos %}
                 <tr>
-                    <td>{{ p.id }}</td>
-                    <td>{{ p.numero_pedido }}</td>
-                    <td>{{ p.picking }}</td>
-                    <td>{{ p.carrier }}</td>
-                    <td>{{ p.m3 }}</td>
-                    <td>{{ p.total_volumes|default:0 }}</td>
-                    <td class="actions">
+                    <td data-label="ID">{{ p.id }}</td>
+                    <td data-label="Pedido">{{ p.numero_pedido }}</td>
+                    <td data-label="Picking">{{ p.picking }}</td>
+                    <td data-label="Transportadora">{{ p.carrier }}</td>
+                    <td data-label="m³">{{ p.m3 }}</td>
+                    <td data-label="Volumes">{{ p.total_volumes|default:0 }}</td>
+                    <td data-label="Ações" class="actions">
                         <a class="btn btn-outline-secondary btn-sm" href="{% url 'fretes:pedido_update' p.id %}">Editar</a>
                     </td>
                 </tr>

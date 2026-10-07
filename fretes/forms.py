@@ -3,7 +3,32 @@ from django import forms
 from django.forms import ModelForm
 from .models import Carrier, Pedido, PedidoVolume, Produto, Cliente, Garantia, FreteCalculado
 
-class CalcularFreteForm(forms.Form):
+class MobileWidgetsMixin:
+    """Padroniza widgets sem alterar validação ou valores enviados."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        autocomplete = {
+            "nome": "name", "email": "email", "telefone": "tel",
+            "endereco": "street-address", "cidade": "address-level2", "estado": "address-level1",
+        }
+        for name, field in self.fields.items():
+            widget = field.widget
+            if isinstance(widget, forms.HiddenInput):
+                continue
+            css = "form-select" if isinstance(widget, forms.Select) else "form-control"
+            if isinstance(widget, forms.CheckboxInput):
+                css = "form-check-input"
+            widget.attrs.setdefault("class", css)
+            if isinstance(widget, forms.NumberInput):
+                widget.attrs.setdefault("inputmode", "numeric" if isinstance(field, forms.IntegerField) else "decimal")
+            if name in autocomplete:
+                widget.attrs.setdefault("autocomplete", autocomplete[name])
+            if name == "telefone":
+                widget.input_type = "tel"
+
+
+class CalcularFreteForm(MobileWidgetsMixin, forms.Form):
     # Suporta multiplos pedidos separados por virgula
     numero_pedido = forms.CharField(label="Pedidos")
     carrier = forms.ModelChoiceField(queryset=Carrier.objects.all(), required=False)
@@ -64,18 +89,19 @@ class CalcularFreteForm(forms.Form):
 
 
 
-class PedidoForm(ModelForm):
+class PedidoForm(MobileWidgetsMixin, ModelForm):
     class Meta:
         model = Pedido
         fields = ["numero_pedido", "picking", "carrier"]
+        labels = {"numero_pedido": "Número do pedido", "carrier": "Transportadora"}
 
-class PedidoVolumeForm(ModelForm):
+class PedidoVolumeForm(MobileWidgetsMixin, ModelForm):
     class Meta:
         model = PedidoVolume
         fields = ["largura_cm", "altura_cm", "comprimento_cm", "quantidade"]
 
 
-class ProdutoForm(ModelForm):
+class ProdutoForm(MobileWidgetsMixin, ModelForm):
     class Meta:
         model = Produto
         fields = [
@@ -95,7 +121,7 @@ class ProdutoForm(ModelForm):
         }
 
 
-class ClienteForm(ModelForm):
+class ClienteForm(MobileWidgetsMixin, ModelForm):
     class Meta:
         model = Cliente
         fields = ["nome", "cnpj", "endereco", "cidade", "estado", "email", "telefone"]
@@ -110,7 +136,7 @@ class ClienteForm(ModelForm):
         }
 
 
-class GarantiaForm(ModelForm):
+class GarantiaForm(MobileWidgetsMixin, ModelForm):
     class Meta:
         model = Garantia
         fields = [
@@ -186,7 +212,7 @@ class GarantiaForm(ModelForm):
         return data
 
 
-class GarantiaHeaderForm(forms.Form):
+class GarantiaHeaderForm(MobileWidgetsMixin, forms.Form):
     nota_recebida = forms.CharField(
         label="Nota recebida",
         required=True,
@@ -231,7 +257,7 @@ class GarantiaHeaderForm(forms.Form):
         )
 
 
-class GarantiaItemForm(forms.Form):
+class GarantiaItemForm(MobileWidgetsMixin, forms.Form):
     codigo_peca = forms.CharField(label="Codigo da peca")
     marca = forms.CharField(label="Marca", widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Marca da peca"}))
     numero_lote = forms.CharField(label="Numero do lote", required=False, widget=forms.TextInput(attrs={"class": "form-control"}))

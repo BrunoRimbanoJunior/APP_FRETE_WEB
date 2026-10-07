@@ -1,0 +1,78 @@
+name: Functional and mobile tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  nginx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build application and Nginx
+        run: |
+          docker compose -f docker-compose.validation.yml build web
+          docker build -f deploy/nginx/Dockerfile -t app-frete-nginx:validation deploy
+          docker compose -f docker-compose.validation.yml up -d --wait
+          docker run --rm --network fretes-validation_default app-frete-nginx:validation nginx -t
+      - name: Validate real HTTP proxy
+        run: |
+          docker compose -f docker-compose.validation.yml exec -T web python scripts/seed_validation.py > /tmp/nginx-access.txt
+          docker compose -f docker-compose.validation.yml cp /tmp/nginx-access.txt web:/tmp/nginx-access.txt
+          docker compose -f docker-compose.validation.yml exec -T -e PYTHONPATH=/app -e CHECK_NGINX_HEALTH=1 web python scripts/validate_nginx.py --access-file /tmp/nginx-access.txt
+      - name: Cleanup isolated environment
+        if: always()
+        run: |
+          docker compose -f docker-compose.validation.yml down -v
+          rm -f /tmp/nginx-access.txt
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: validation
+          POSTGRES_USER: validation
+          POSTGRES_PASSWORD: validation
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U validation -d validation"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://validation:validation@127.0.0.1:5432/validation
+      DJANGO_SETTINGS_MODULE: fretes_web.settings.dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r requirements.txt -r requirements-dev.txt -r requirements-browser.txt
+      - name: Verify dependency exports
+        run: |
+          python -m pip install uv==0.12.23
+          uv lock --check
+          uv export --frozen --no-dev --no-emit-project --no-header --output-file /tmp/runtime.txt --quiet
+          uv export --frozen --only-group dev --no-emit-project --no-header --output-file /tmp/dev.txt --quiet
+          uv export --frozen --only-group browser --no-emit-project --no-header --output-file /tmp/browser.txt --quiet
+          diff -u requirements.txt /tmp/runtime.txt
+          diff -u requirements-dev.txt /tmp/dev.txt
+          diff -u requirements-browser.txt /tmp/browser.txt
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Django and dependency checks
+        run: |
+          python -m pip check
+          python manage.py check
+          python manage.py makemigrations --check --dry-run
+          python manage.py collectstatic --noinput
+      - name: Functional tests
+        run: python -m pytest -q fretes/tests
+      - name: Browser and mobile tests
+        run: python -m pytest -q browser_tests

@@ -34,3 +34,4 @@ deploy/.env.prod
 *.log
 # Backups gerados pelo serviço
 backups/
+validation-artifacts/

@@ -40,11 +40,17 @@
     restart: unless-stopped
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.31.3-alpine@sha256:4a73073bd557c65b759505da037898b61f1be6cbcc3c2c3aeac22d2a470c1752
     ports:
       - "8082:80"
     volumes:
       - ./deploy/conf.d:/etc/nginx/conf.d:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
     depends_on:
       - web
     restart: unless-stopped
@@ -100,4 +106,3 @@
 
 volumes:
   pgdata:
-

@@ -1085,6 +1085,8 @@ def audit_log_view(request):
         'user_id': user_id or '',
         'action': action,
         'module': module,
+        'actions': AuditLog.ACTIONS,
+        'modules': (("model", "Modelos"), ("tools", "Ferramentas"), ("view", "Páginas")),
         'start_date': start_date,
         'end_date': end_date,
         'q': q,

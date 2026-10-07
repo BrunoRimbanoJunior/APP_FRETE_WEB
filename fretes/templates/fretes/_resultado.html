@@ -25,6 +25,11 @@
     {% for err in form.non_field_errors %}
       <div>{{ err }}</div>
     {% endfor %}
+    {% for field in form %}
+      {% for err in field.errors %}
+        <div>{{ field.label }}: {{ err }}</div>
+      {% endfor %}
+    {% endfor %}
   </div>
 
   <!-- Sugestão: cadastrar pedido com o número digitado -->

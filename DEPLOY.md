@@ -1,164 +1,126 @@
-﻿Deploy em ProduÃ§Ã£o (Docker Compose + Portainer)
+# Deploy em produção — Docker Compose e Portainer
 
-Este guia descreve o fluxo recomendado para publicar novas versÃµes em produÃ§Ã£o, incluindo backup do banco, validaÃ§Ãµes e rollback.
+O app é Django/Gunicorn com PostgreSQL 16 e Nginx. O acesso à intranet permanece
+HTTP na porta 8082. A stack de backup continua separada.
 
-1) VisÃ£o Geral
-- App: Django + Gunicorn
-- Banco: Postgres
-- OrquestraÃ§Ã£o: deploy/docker-compose.prod.yml
-- Imagens: publicadas via GitHub Actions em ghcr.io/<org>/app_frete_web:<tag>
+## Release atual
 
-2) PrÃ©â€‘requisitos
-- Acesso ao host/Portainer onde roda o stack de produÃ§Ã£o
-- VariÃ¡veis de ambiente definidas (no Portainer/stack ou .env.prod):
-  - POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_PORT
-  - DJANGO_SECRET_KEY, DJANGO_DEBUG=0, DJANGO_SETTINGS_MODULE=fretes_web.settings.prod
-  - DJANGO_CSRF_TRUSTED_ORIGINS e/ou CSRF_TRUSTED_ORIGINS
-  - TZ (ex.: America/Sao_Paulo — usado pelo auto-backup)
-- ServiÃ§o web do compose de prod usa comando que executa migrate e collectstatic antes do Gunicorn
+A versão está em `VERSION`: **v2026.10.07-1**. O Git registra código, lockfile,
+Dockerfiles e configuração. As imagens compiladas são publicadas no GHCR:
 
-3) Versionamento da Imagem
-Evite latest em produÃ§Ã£o. Prefira tags versionadas (ex.: vYYYY-MM-DD-n). Altere a linha image: do serviÃ§o web no deploy/docker-compose.prod.yml para a tag desejada.
+- `ghcr.io/brunorimbanojunior/app_frete_web:v2026.10.07-1`
+- `ghcr.io/brunorimbanojunior/app_frete_web-nginx:v2026.10.07-1`
 
-4) Backup do Banco (antes do deploy)
-Crie um dump dentro do container do Postgres:
+O CI executa testes de funcionalidade, navegador e proxy antes de publicar as
+duas imagens. Também publica tags do SHA do commit, da branch e `latest`.
+Produção usa a versão explícita por padrão; `APP_IMAGE_TAG` permite selecionar
+outra versão. Mantenha app e Nginx na mesma versão.
 
-docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -F c -f /var/lib/postgresql/data/backup_$(date +%F_%H%M).dump'
+As bases Python 3.13.16 e Nginx 1.31.3 estão fixadas por digest. As dependências
+Python estão no `uv.lock` e são instaladas com hashes de `requirements.txt`.
+Os estáticos são coletados pelo entrypoint antes de iniciar o Gunicorn.
 
-Opcional: copie o arquivo do container para o host (troque <db-container> pelo nome real obtido com docker ps/docker compose ps):
+## Antes de atualizar a stack existente
 
-docker cp <db-container>:/var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump ./backup_YYYY-MM-DD_HHMM.dump
+Confira que o workflow CI/CD terminou com sucesso para o commit do release e
+que as duas imagens estão disponíveis. Registre as tags/digests atuais para
+rollback e gere um backup do banco em produção.
 
-4.1) Verificar o Backup
-- Listar conteÃºdo do arquivo (sem restaurar):
+Preserve o nome atual da stack/projeto Compose e os volumes PostgreSQL existentes.
+O nome do projeto participa do nome dos volumes; mudar o nome pode iniciar um banco
+vazio em um volume novo. O backup restaurado e as credenciais da validação local
+não fazem parte do release.
 
-docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -l /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump | head -n 40'
+Variáveis existentes a manter: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`,
+`POSTGRES_HOST=db`, `POSTGRES_PORT=5432`, `DJANGO_SECRET_KEY`, `ALLOWED_HOSTS` e
+`DJANGO_CSRF_TRUSTED_ORIGINS`/`CSRF_TRUSTED_ORIGINS`.
+Em HTTP, mantenha `CSRF_COOKIE_SECURE=0` e `SESSION_COOKIE_SECURE=0`.
+Use `DJANGO_DEBUG=0`. Não versione `.env.prod` ou credenciais.
 
-- Teste de integridade (dryâ€‘run de catÃ¡logo):
+## Portainer
 
-docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -l /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump > /dev/null'
+1. Atualize a stack existente com `deploy/docker-compose.prod.yml` deste release.
+2. Nas variáveis da stack, defina `APP_IMAGE_TAG=v2026.10.07-1`, mantendo as demais.
+3. Faça pull das duas imagens e atualize a stack preservando banco, rede e volumes.
+4. Confira os logs do web, saúde do Nginx e as verificações funcionais abaixo.
 
-- RestauraÃ§Ã£o em um banco temporÃ¡rio e checagem:
+O Compose conserva o build local do Nginx como alternativa, mas a publicação no
+GHCR permite atualizar o proxy sem compilar no servidor. Para imagens privadas,
+a autenticação no GHCR deve existir no servidor/Portainer.
 
-createdb -U "$POSTGRES_USER" tmp_restore
-pg_restore -U "$POSTGRES_USER" -d tmp_restore -c /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump
-psql -U "$POSTGRES_USER" -d tmp_restore -c "\\dt"
-psql -U "$POSTGRES_USER" -d tmp_restore -c "select count(*) from django_migrations;"
-dropdb -U "$POSTGRES_USER" tmp_restore
+## Servidor com checkout Git e Docker Compose
 
-5) Validar MigraÃ§Ãµes (opcional)
-Listar migraÃ§Ãµes reconhecidas pela aplicaÃ§Ã£o:
+Execute no diretório do projeto e use o nome real da stack já existente.
+O exemplo abaixo usa `.env.prod` como arquivo local de variáveis:
 
-docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py showmigrations
+```bash
+export COMPOSE_PROJECT_NAME=nome_atual_da_stack
+export APP_IMAGE_TAG=v2026.10.07-1
 
-Ver o plano (Django 5.0+):
+git pull --ff-only origin hotfix/principal
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml config --quiet
+```
 
-docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py migrate --plan
+Gere um dump antes de atualizar. O arquivo vai para `/tmp` do DB porque a montagem
+`/backups` dessa stack é somente leitura. Copie-o para uma pasta de backup do servidor:
 
-6) Atualizar Imagem e Aplicar Deploy (otimizado)
-- Baixar a nova imagem:
+```bash
+mkdir -p backups
+backup_file="pre-deploy-$(date +%Y%m%dT%H%M%S).dump"
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml exec -T db sh -lc 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc -f /tmp/pre-deploy.dump'
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml exec -T db sh -lc 'pg_restore -l /tmp/pre-deploy.dump > /dev/null'
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml cp db:/tmp/pre-deploy.dump "backups/$backup_file"
+```
 
-docker compose -f deploy/docker-compose.prod.yml pull web
+Baixe as duas imagens, confira a configuração do proxy e atualize somente web/Nginx:
 
-- Rodar migrações (one‑off):
+```bash
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml pull web nginx
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml run --rm --no-deps nginx nginx -t
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml up -d --no-deps --wait web nginx
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml ps
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml logs --tail 100 web nginx
+```
 
-docker compose -f deploy/docker-compose.prod.yml run --rm --profile ops migrate
+O entrypoint do web aguarda PostgreSQL, aplica migrações, coleta estáticos e inicia
+Gunicorn. Não existem serviços `migrate`/`collectstatic` ou perfil `ops` neste Compose.
+O release atual não adiciona migrações. A recriação do único web pode causar uma
+breve indisponibilidade; o Nginx acompanha automaticamente a mudança de IP.
 
-- Coletar estáticos (one‑off):
+Para compilar o Nginx diretamente no servidor como alternativa ao pull:
 
-docker compose -f deploy/docker-compose.prod.yml run --rm --profile ops collectstatic
+```bash
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml build nginx
+```
 
-- Subir somente o web (inicia direto o Gunicorn):
+## Validação depois do deploy
 
-docker compose -f deploy/docker-compose.prod.yml up -d web
+- `/` deve redirecionar para `/fretes/`, preservando a porta 8082.
+- Login, pedidos, clientes, produtos, garantias e relatórios devem abrir normalmente.
+- Confira buscas HTMX, menus no celular e exportações PDF/Excel autenticadas.
+- Importações de clientes/produtos aceitam até 20 MiB de corpo HTTP, incluindo multipart.
+  As demais rotas mantêm 1 MiB. Permissões e validações continuam no Django.
+- `/nginx-health` deve retornar `ok`. Esse endpoint verifica apenas o Nginx;
+  confira o web pelos logs e por uma requisição real ao app.
+- Os logs de acesso são JSON com tempos total/do upstream, sem parâmetros de URL ou cookies.
 
-- Acompanhar logs e aguardar o Gunicorn subir:
+## Rollback
 
-docker compose -f deploy/docker-compose.prod.yml logs -f web
+Selecione a versão anterior registrada antes do deploy usando `APP_IMAGE_TAG`,
+faça pull e recrie apenas web/Nginx. Se a versão anterior ainda não possui uma
+imagem Nginx no GHCR, use a imagem/configuração do proxy que estava em execução.
+Não remova volumes para reverter uma atualização do app.
 
-7) Smoke Test PÃ³sâ€‘Deploy
-- /fretes/ â€“ home
-- /fretes/pedidos/ â€“ listar e filtrar
-- /fretes/garantias/ â€“ filtros e exportaÃ§Ãµes (PDF/Excel)
-- (se staff) /fretes/admin/tools/importar-produtos/ e /fretes/admin/tools/importar-clientes/
+## Backup e restauração
 
-8) Rollback
-- Com tag: mude image: para a tag anterior, depois:
+O agendamento está em `deploy/docker-compose.backup.yml`. Essa stack usa os nomes
+externos de rede e volume do app; mantenha os nomes reais da implantação.
+Os scripts `deploy/db-tools/backup_restore.sh` e `deploy/auto-backup/backup.sh`
+continuam disponíveis. Uma restauração de banco é uma operação separada do deploy.
 
-docker compose -f deploy/docker-compose.prod.yml pull web && docker compose -f deploy/docker-compose.prod.yml up -d web
+## Validação local
 
-- Se precisar restaurar o banco:
-
-docker compose -f deploy/docker-compose.prod.yml exec db sh -lc 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c /var/lib/postgresql/data/backup_YYYY-MM-DD_HHMM.dump'
-
-9) Dicas e SoluÃ§Ã£o de Problemas
-- 502/Bad Gateway logo apÃ³s o deploy geralmente Ã© o web subindo; aguarde alguns segundos.
-- Verifique db (health=healthy) e logs do web.
-- Problemas de sessÃ£o/CSRF em HTTPS: alinhe DJANGO_CSRF_TRUSTED_ORIGINS/CSRF_TRUSTED_ORIGINS e flags de cookies.
-- Em caso de erro em migraÃ§Ã£o, rode manualmente para ver a mensagem completa:
-
-docker compose -f deploy/docker-compose.prod.yml run --rm web python manage.py migrate --noinput -v 3
-
-10) Pipeline CI/CD
-- Cada push na branch configurada dispara o workflow (.github/workflows/ci-cd.yml).
-- Verifique no GitHub Actions se a imagem foi construÃ­da e publicada.
-- Use a tag gerada no deploy/docker-compose.prod.yml (ou mantenha latest se preferir, embora nÃ£o recomendado).
-
-
-
-
-11) Auto-backup em Produção (stack separada)
-- Agora o backup roda em stack separada (`deploy/docker-compose.backup.yml`) para isolar do app.
-
-- Pré-requisito: rede e volume externos do stack do app (ajuste os nomes se necessário):
-  - Rede: `app_frete_default` (do stack principal)
-  - Volume: `app_frete_pgbackups` (compartilhado entre stacks)
-
-- Subir/atualizar backup (Portainer: criar nova stack apontando para deploy/docker-compose.backup.yml):
-
-  docker compose -f deploy/docker-compose.backup.yml up -d
-
-- Logs do backup:
-
-  docker compose -f deploy/docker-compose.backup.yml logs -f auto-backup
-
-- Listar dumps:
-
-  docker compose -f deploy/docker-compose.backup.yml exec auto-backup sh -lc 'ls -lh /backups | tail -n +1'
-
-
-12) Restauração rápida pelo container do DB
-- O serviço `db` monta:
-  - `pgbackups` em `/backups` (somente leitura)
-  - script `/usr/local/bin/backup_restore.sh`
-
-- Restaurar o dump mais recente (com drop e recreate):
-
-  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh'
-
-- Restaurar um arquivo específico:
-
-  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
-
-- Restaurar sem dropar o banco antes:
-
-  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh --no-drop'
-
-13) Restauração rápida pelo container do DB (alternativas)
-- Usar o container do DB (exec):
-
-  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh'
-
-- Usar um cliente efêmero (run dbtools):
-  (instala client e executa o script contra o serviço `db` pela rede Compose)
-
-  docker compose -f deploy/docker-compose.backup.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh'
-
-- Restaurar arquivo específico:
-
-  docker compose -f deploy/docker-compose.prod.yml exec db sh -lc '/usr/local/bin/backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
-
-  # ou com dbtools efêmero
-  docker compose -f deploy/docker-compose.backup.yml run --rm dbtools sh -lc 'apk add --no-cache postgresql$PG_CLIENT_MAJOR-client && backup_restore.sh /backups/backup_fretes_db_YYYY-MM-DD_HH-MM.dump'
-
-12) Teste de calculo de fretes, dentro do container web rodar os teste , pytest fretes/tests/test_tipo1_calculo.py -q, pytest fretes/tests/test_tipo2_calculo.py -q, ou para rodar todos de uma vez pytest -q
+`docker-compose.validation.yml` usa porta 8083 e banco/volume próprios. O script
+`scripts/validate_nginx.py` testa o proxy real somente no banco `validation`
+com `VALIDATION_ONLY=1`; consulte o README. Credenciais e relatórios locais ficam
+em `validation-artifacts/`, que é ignorado pelo Git e pelo build.

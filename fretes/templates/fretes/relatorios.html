@@ -31,7 +31,7 @@
     </form>
 
     <div class="table-responsive mt-3">
-      <table class="table table-striped table-sm">
+      <table class="table mobile-table table-striped table-sm">
         <thead>
           <tr>
             <th>Data</th>
@@ -50,8 +50,8 @@
         <tbody>
         {% for f in fretes %}
           <tr>
-            <td>{{ f.data_calculo }}</td>
-            <td>
+            <td data-label="Data">{{ f.data_calculo }}</td>
+            <td data-label="Pedidos">
               {% with ps=f.pedidos.all %}
                 {% if ps %}
                   {% for p in ps %}{% if not forloop.first %}, {% endif %}{{ p.numero_pedido }}{% endfor %}
@@ -60,15 +60,15 @@
                 {% endif %}
               {% endwith %}
             </td>
-            <td>{{ f.numero_nota }}</td>
-            <td>{{ f.get_tipo_frete_display }}</td>
-            <td>{{ f.valor_nota }}</td>
-            <td>{{ f.kg_nota }}</td>
-            <td>{{ f.carrier }}</td>
-            <td>{{ f.m3 }}</td>
-            <td>{{ f.peso_cubico }}</td>
-            <td>{{ f.peso_usado }}</td>
-            <td>{{ f.frete_total }}</td>
+            <td data-label="Nota">{{ f.numero_nota }}</td>
+            <td data-label="Tipo de frete">{{ f.get_tipo_frete_display }}</td>
+            <td data-label="Valor">{{ f.valor_nota }}</td>
+            <td data-label="KG">{{ f.kg_nota }}</td>
+            <td data-label="Transportadora">{{ f.carrier }}</td>
+            <td data-label="m³">{{ f.m3 }}</td>
+            <td data-label="Peso cúbico">{{ f.peso_cubico }}</td>
+            <td data-label="Peso usado">{{ f.peso_usado }}</td>
+            <td data-label="Total">{{ f.frete_total }}</td>
           </tr>
         {% empty %}
           <tr><td colspan="11" class="text-muted">Sem registros.</td></tr>

@@ -9,7 +9,11 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
   build-and-push:
+    needs: tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,6 +23,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       # Gera nome da imagem *todo em minúsculas*: ghcr.io/<owner>/<repo>
       - name: Compute lowercase image name
         id: meta
@@ -27,6 +34,13 @@ jobs:
           repo_lc="${GITHUB_REPOSITORY,,}"                 # owner/repo -> minúsculas
           echo "repo_lc=$repo_lc" >> "$GITHUB_OUTPUT"
           echo "image=ghcr.io/$repo_lc" >> "$GITHUB_OUTPUT"
+          echo "nginx_image=ghcr.io/$repo_lc-nginx" >> "$GITHUB_OUTPUT"
+          release_tag="$(tr -d '\r\n' < VERSION)"
+          if [[ ! "$release_tag" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9]+$ ]]; then
+            echo 'Invalid release tag in VERSION' >&2
+            exit 1
+          fi
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "branch_tag=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr '/_' '-')" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
@@ -36,7 +50,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push image
+      - name: Build & push application image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -45,6 +59,24 @@ jobs:
             ${{ steps.meta.outputs.image }}:latest
             ${{ steps.meta.outputs.image }}:${{ github.sha }}
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.branch_tag }}
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.release_tag }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}
+
+      - name: Build & push Nginx image
+        uses: docker/build-push-action@v6
+        with:
+          context: deploy
+          file: deploy/nginx/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.nginx_image }}:latest
+            ${{ steps.meta.outputs.nginx_image }}:${{ github.sha }}
+            ${{ steps.meta.outputs.nginx_image }}:${{ steps.meta.outputs.branch_tag }}
+            ${{ steps.meta.outputs.nginx_image }}:${{ steps.meta.outputs.release_tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}

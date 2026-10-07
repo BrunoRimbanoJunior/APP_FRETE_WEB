@@ -1,4 +1,4 @@
-﻿{% extends "fretes/base.html" %}
+{% extends "fretes/base.html" %}
 {% load static %}
 {% block extra_head %}{% include "fretes/_htmx_head.html" %}{% endblock %}
 {% block title %}Nova Garantia{% endblock %}
@@ -31,14 +31,14 @@
 
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar cliente</label>
-      <div class="col-sm-9 d-flex gap-2">
+      <div class="col-sm-9 d-flex mobile-stack gap-2">
         <input type="search" id="cliente-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack"
                 hx-get="{% url 'fretes:clientes_options' %}"
                 hx-target="#id_cliente"
                 hx-swap="innerHTML"
-                hx-include="#cliente-search,#id_cliente">Buscar</button>
+                hx-include="#cliente-search,#id_cliente">Buscar</button><span class="htmx-indicator" role="status">Buscando…</span>
         <a class="btn btn-outline-primary" href="{% url 'fretes:cliente_create' %}" target="_blank">Cadastrar cliente</a>
       </div>
     </div>
@@ -70,14 +70,14 @@
       <div class="card-body">
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Buscar produto</label>
-          <div class="col-sm-9 d-flex gap-2">
+          <div class="col-sm-9 d-flex mobile-stack gap-2">
             <input type="search" class="form-control" id="produto-search" name="q" minlength="2" placeholder="Digite ao menos 2 caracteres">
             <button type="button"
-                    class="btn btn-outline-secondary"
+                    class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack"
                     hx-get="{% url 'fretes:produtos_options' %}"
                     hx-target="#id_item_codigo_peca"
                     hx-swap="innerHTML"
-                    hx-include="#produto-search,#id_item_codigo_peca">Buscar</button>
+                    hx-include="#produto-search,#id_item_codigo_peca">Buscar</button><span class="htmx-indicator" role="status">Buscando…</span>
           </div>
         </div>
         <div class="row mb-2">
@@ -106,7 +106,7 @@
 
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Valor</label>
-          <div class="col-sm-9"><input type="number" step="0.01" id="id_item_valor" class="form-control"></div>
+          <div class="col-sm-9"><input type="number" inputmode="decimal" step="0.01" id="id_item_valor" class="form-control"></div>
         </div>
 
         <div class="row mb-2 align-items-center">
@@ -121,7 +121,7 @@
 
         <div class="row mb-2">
           <label class="col-sm-3 col-form-label">Valor mao de obra</label>
-          <div class="col-sm-9"><input type="number" step="0.01" id="id_item_valor_mao_de_obra" class="form-control" disabled></div>
+          <div class="col-sm-9"><input type="number" inputmode="decimal" step="0.01" id="id_item_valor_mao_de_obra" class="form-control" disabled></div>
         </div>
 
         <div class="row mb-2">
@@ -134,15 +134,15 @@
           <div class="col-sm-9"><input type="date" id="id_item_data_retorno" class="form-control"></div>
         </div>
 
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-outline-secondary" id="add-item-btn">Adicionar item</button>
+        <div class="d-flex mobile-stack gap-2">
+          <button type="button" class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack" id="add-item-btn">Adicionar item</button>
           <button type="button" class="btn btn-light d-none" id="cancel-edit-btn">Cancelar edicao</button>
         </div>
       </div>
     </div>
 
     <div class="table-responsive mb-3">
-      <table class="table table-striped table-sm" id="items-table">
+      <table class="table mobile-table table-striped table-sm" id="items-table">
         <thead>
           <tr>
             <th>Produto</th>
@@ -161,9 +161,9 @@
     <script type="application/json" id="items-initial-data">{{ items_json|default:"[]"|safe }}</script>
     <input type="hidden" name="items_payload" id="id_items_payload">
 
-    <div class="d-flex gap-2 mb-3">
+    <div class="d-flex mobile-stack gap-2 mb-3">
       <button type="submit" class="btn btn-primary">Salvar</button>
-      <a class="btn btn-outline-secondary" href="{% url 'fretes:garantia_list' %}">Voltar</a>
+      <a class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack" href="{% url 'fretes:garantia_list' %}">Voltar</a>
     </div>
   </form>
 </div>

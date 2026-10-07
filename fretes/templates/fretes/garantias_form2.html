@@ -20,14 +20,14 @@
 
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar cliente</label>
-      <div class="col-sm-9 d-flex gap-2">
+      <div class="col-sm-9 d-flex mobile-stack gap-2">
         <input type="search" id="cliente-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack"
                 hx-get="{% url 'fretes:clientes_options' %}"
                 hx-target="#id_cliente"
                 hx-swap="innerHTML"
-                hx-include="#cliente-search,#id_cliente">Buscar</button>
+                hx-include="#cliente-search,#id_cliente">Buscar</button><span class="htmx-indicator" role="status">Buscando…</span>
         <a class="btn btn-outline-primary" href="{% url 'fretes:cliente_create' %}" target="_blank">Cadastrar cliente</a>
       </div>
     </div>
@@ -47,14 +47,14 @@
     <!-- Parte 2: Produto e demais campos -->
     <div class="row mb-2">
       <label class="col-sm-3 col-form-label">Buscar produto</label>
-      <div class="col-sm-9 d-flex gap-2">
+      <div class="col-sm-9 d-flex mobile-stack gap-2">
         <input type="search" id="produto-search" name="q" class="form-control" minlength="2" placeholder="Digite ao menos 2 caracteres">
         <button type="button"
-                class="btn btn-outline-secondary"
+                class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack"
                 hx-get="{% url 'fretes:produtos_options' %}"
                 hx-target="#id_codigo_peca_select"
                 hx-swap="innerHTML"
-                hx-include="#produto-search,#id_codigo_peca_select">Buscar</button>
+                hx-include="#produto-search,#id_codigo_peca_select">Buscar</button><span class="htmx-indicator" role="status">Buscando…</span>
       </div>
     </div>
 
@@ -111,9 +111,9 @@
       <div class="col-sm-9">{{ form.data_retorno }}{% if form.data_retorno.errors %}<div class="text-danger small">{{ form.data_retorno.errors|join:', ' }}</div>{% endif %}</div>
     </div>
 
-    <div class="d-flex gap-2">
+    <div class="d-flex mobile-stack gap-2">
       <button class="btn btn-primary" type="submit">Salvar</button>
-      <a class="btn btn-outline-secondary" href="{% url 'fretes:garantia_list' %}">Voltar</a>
+      <a class="btn btn-outline-secondary" hx-disabled-elt="this" hx-indicator="closest .mobile-stack" href="{% url 'fretes:garantia_list' %}">Voltar</a>
     </div>
   </form>
 </div>

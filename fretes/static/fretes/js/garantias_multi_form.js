@@ -131,13 +131,13 @@
         const retornoInfo = retornoParts.join(' | ');
 
         return '<tr data-index="' + index + '">' +
-          '<td>' + produtoLabel + '</td>' +
-          '<td>' + marca + '</td>' +
-          '<td>' + defeito + '</td>' +
-          '<td>' + valor + '</td>' +
-          '<td>' + mao + maoValor + '</td>' +
-          '<td>' + retornoInfo + '</td>' +
-          '<td class="text-end">' +
+          '<td data-label="Produto">' + produtoLabel + '</td>' +
+          '<td data-label="Marca">' + marca + '</td>' +
+          '<td data-label="Defeito">' + defeito + '</td>' +
+          '<td data-label="Valor">' + valor + '</td>' +
+          '<td data-label="Mão de obra">' + mao + maoValor + '</td>' +
+          '<td data-label="Retorno">' + retornoInfo + '</td>' +
+          '<td data-label="Ações" class="text-end">' +
             '<div class="btn-group btn-group-sm" role="group">' +
               '<button type="button" class="btn btn-outline-secondary" data-action="edit">Editar</button>' +
               '<button type="button" class="btn btn-outline-danger" data-action="remove">Remover</button>' +

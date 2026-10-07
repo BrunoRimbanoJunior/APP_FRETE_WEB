@@ -1,18 +1,11 @@
+{% extends "fretes/base.html" %}
 {% load static %}
-<!doctype html>
-<html lang="pt-br">
-<head>
-    <meta charset="utf-8">
-    <title>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</title>
+{% block title %}{% if is_new %}Novo{% else %}Editar{% endif %} Pedido{% endblock %}
+{% block extra_head %}
     <link rel="stylesheet" href="{% static 'fretes/styles.css' %}">
-</head>
-<body>
-<div class="container">
-    {% if messages %}
-      {% for m in messages %}
-        <div class="alert alert-{{ m.tags }}">{{ m }}</div>
-      {% endfor %}
-    {% endif %}
+{% endblock %}
+{% block content %}
+<div class="container pedido-editor">
     <h1>{% if is_new %}Novo{% else %}Editar{% endif %} Pedido</h1>
 
     <form method="post" action="{% if is_new %}{% url 'fretes:pedido_create' %}{% else %}{% url 'fretes:pedido_update' pedido.id %}{% endif %}" novalidate>
@@ -20,25 +13,25 @@
         {{ form.non_field_errors }}
         <div class="form-row">
             <div class="form-col form-group">
-                <label>{{ form.numero_pedido.label_tag }}</label>
+                {{ form.numero_pedido.label_tag }}
                 {{ form.numero_pedido }}
                 {{ form.numero_pedido.errors }}
             </div>
             <div class="form-col form-group">
-                <label>{{ form.picking.label_tag }}</label>
+                {{ form.picking.label_tag }}
                 {{ form.picking }}
                 {{ form.picking.errors }}
             </div>
             <div class="form-col form-group">
-                <label>{{ form.carrier.label_tag }}</label>
+                {{ form.carrier.label_tag }}
                 {{ form.carrier }}
                 {{ form.carrier.errors }}
             </div>
         </div>
         <div class="form-row">
             <div class="form-col form-group">
-                <label>Total de volumes</label>
-                <input type="number" id="total-volumes-display" value="{{ total_volumes|default:0 }}" readonly>
+                <label for="total-volumes-display">Total de volumes</label>
+                <input type="number" class="form-control" id="total-volumes-display" value="{{ total_volumes|default:0 }}" readonly>
             </div>
         </div>
 
@@ -59,19 +52,19 @@
                     </div>
                     <div class="volume-fields">
                         <div class="volume-field">
-                            <label>Largura (cm)</label>
+                            <label for="{{ f.largura_cm.id_for_label }}">Largura (cm)</label>
                             {{ f.largura_cm }}
                         </div>
                         <div class="volume-field">
-                            <label>Altura (cm)</label>
+                            <label for="{{ f.altura_cm.id_for_label }}">Altura (cm)</label>
                             {{ f.altura_cm }}
                         </div>
                         <div class="volume-field">
-                            <label>Comprimento (cm)</label>
+                            <label for="{{ f.comprimento_cm.id_for_label }}">Comprimento (cm)</label>
                             {{ f.comprimento_cm }}
                         </div>
                         <div class="volume-field">
-                            <label>Quantidade</label>
+                            <label for="{{ f.quantidade.id_for_label }}">Quantidade</label>
                             {{ f.quantidade }}
                         </div>
                         {% for field, errors in f.errors.items %}
@@ -113,20 +106,20 @@
         </div>
         <div class="volume-fields">
           <div class="volume-field">
-            <label>Largura (cm)</label>
-            <input type="number" name="vol-__prefix__-largura_cm" id="id_vol-__prefix__-largura_cm" required>
+            <label for="id_vol-__prefix__-largura_cm">Largura (cm)</label>
+            <input type="number" inputmode="decimal" step="0.01" name="vol-__prefix__-largura_cm" id="id_vol-__prefix__-largura_cm" required>
           </div>
           <div class="volume-field">
-            <label>Altura (cm)</label>
-            <input type="number" name="vol-__prefix__-altura_cm" id="id_vol-__prefix__-altura_cm" required>
+            <label for="id_vol-__prefix__-altura_cm">Altura (cm)</label>
+            <input type="number" inputmode="decimal" step="0.01" name="vol-__prefix__-altura_cm" id="id_vol-__prefix__-altura_cm" required>
           </div>
           <div class="volume-field">
-            <label>Comprimento (cm)</label>
-            <input type="number" name="vol-__prefix__-comprimento_cm" id="id_vol-__prefix__-comprimento_cm" required>
+            <label for="id_vol-__prefix__-comprimento_cm">Comprimento (cm)</label>
+            <input type="number" inputmode="decimal" step="0.01" name="vol-__prefix__-comprimento_cm" id="id_vol-__prefix__-comprimento_cm" required>
           </div>
           <div class="volume-field">
-            <label>Quantidade</label>
-            <input type="number" name="vol-__prefix__-quantidade" id="id_vol-__prefix__-quantidade" required value="1">
+            <label for="id_vol-__prefix__-quantidade">Quantidade</label>
+            <input type="number" inputmode="numeric" name="vol-__prefix__-quantidade" id="id_vol-__prefix__-quantidade" required value="1">
           </div>
         </div>
         <input type="hidden" name="vol-__prefix__-id" id="id_vol-__prefix__-id">
@@ -182,5 +175,4 @@
     recalcVolumesTotal();
   });
 </script>
-</body>
-</html>
+{% endblock %}

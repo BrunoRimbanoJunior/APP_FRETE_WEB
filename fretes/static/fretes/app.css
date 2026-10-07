@@ -1,0 +1,160 @@
+.navbar {
+    padding: 10px;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+}
+.navbar .container-fluid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+}
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .75rem;
+    margin-left: auto;
+}
+.menu-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 0;
+    border-radius: 5px;
+    background: #007bff;
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+.menu-link:hover { background: #0056b3; color: white; }
+.menu-link:focus-visible, .cfg-menu a:focus-visible {
+    outline: 3px solid #00458f;
+    outline-offset: 3px;
+}
+.nav-toggle { display: none; }
+.brand-logo { height: 50px; width: 95px; }
+.cfg-dropdown { position: relative; }
+.cfg-dropdown summary { list-style: none; }
+.cfg-dropdown summary::-webkit-details-marker { display: none; }
+.cfg-dropdown summary::after { content: "▾"; margin-left: 6px; }
+.cfg-dropdown[open] summary::after { content: "▴"; }
+.cfg-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    width: min(20rem, calc(100vw - 2rem));
+    padding: 6px;
+    border: 1px solid #e2e2e2;
+    border-radius: 6px;
+    background: white;
+    box-shadow: 0 4px 10px rgb(0 0 0 / 8%);
+    z-index: 1000;
+}
+.cfg-menu a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    color: #333;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+.cfg-menu a:hover { background: #f2f6fc; }
+main { overflow-wrap: anywhere; }
+main .container { max-width: 100%; }
+main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+main select, main textarea {
+    max-width: 100%;
+    min-width: 0;
+    font-size: 1rem;
+}
+.form-control, .form-select { min-height: 44px; }
+main .btn { min-height: 44px; }
+.page-link { min-height: 44px; min-width: 44px; display: flex; align-items: center; justify-content: center; }
+.form-check-label { min-height: 44px; display: inline-flex; align-items: center; }
+.form-row { display: flex; flex-wrap: wrap; gap: 1rem; }
+.form-col { flex: 1 1 250px; min-width: 0; }
+.btn-container { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1rem; }
+.calculator { padding: 1.25rem; background: white; border-radius: .5rem; box-shadow: 0 2px 4px rgb(0 0 0 / 10%); }
+.htmx-indicator { display: none; }
+.htmx-request.htmx-indicator, .htmx-request .htmx-indicator { display: inline; }
+.table td, .table th { vertical-align: middle; }
+.descricao-col { min-width: 20rem; white-space: normal; overflow-wrap: anywhere; }
+.cliente-col { max-width: 320px; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 575.98px) {
+    .mobile-stack { flex-direction: column; align-items: stretch !important; width: 100%; }
+    .mobile-stack > .form-control, .mobile-stack > .btn { width: 100%; }
+    .form-col { flex-basis: 100%; }
+    .calculator { padding: .75rem; }
+    main > .container:not(.pedido-editor):not(.calculator) { padding-left: 0; padding-right: 0; }
+    .pagination { flex-wrap: wrap; }
+    .mobile-table { display: block; margin-bottom: 0; }
+    .mobile-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+    .mobile-table tbody { display: grid; gap: .75rem; }
+    .mobile-table tbody tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: .75rem;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        background: white;
+    }
+    .mobile-table tbody td {
+        display: block;
+        min-width: 0;
+        max-width: none !important;
+        padding: .5rem;
+        border: 0;
+        box-shadow: none;
+        white-space: normal;
+        overflow: visible;
+        overflow-wrap: anywhere;
+        text-align: left !important;
+    }
+    .mobile-table tbody td:first-child,
+    .mobile-table tbody td:last-child,
+    .mobile-table tbody td[colspan] { grid-column: 1 / -1; }
+    .mobile-table td[data-label="Cliente"],
+    .mobile-table td[data-label="Descrição"],
+    .mobile-table td[data-label="Defeito"],
+    .mobile-table td[data-label="Endereços"] { grid-column: 1 / -1; }
+    .mobile-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: .2rem;
+        color: #495057;
+        font-size: .875rem;
+        font-weight: 600;
+    }
+    .mobile-table .descricao-col { min-width: 0; }
+    .mobile-table .btn-group { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .mobile-table .nota-check { width: 24px; height: 24px; margin: 10px; }
+}
+@media (max-width: 767.98px) {
+    .js-navigation .nav-toggle { display: inline-flex; }
+    .js-navigation .nav-links:not(.is-open) { display: none; }
+    .nav-links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        margin: 0;
+        gap: .5rem;
+    }
+    .cfg-dropdown { grid-column: 1 / -1; }
+    .cfg-dropdown summary { width: 100%; }
+    .cfg-menu { position: static; width: 100%; margin-top: .5rem; }
+}
