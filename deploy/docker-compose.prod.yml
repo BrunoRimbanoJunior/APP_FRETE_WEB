@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
 
   web:
-    image: ghcr.io/brunorimbanojunior/app_frete_web:${APP_IMAGE_TAG:-v2026.10.07-1}
+    image: ghcr.io/brunorimbanojunior/app_frete_web:${APP_IMAGE_TAG:-v2026.10.07-2}
     pull_policy: always
     environment:
       DJANGO_SETTINGS_MODULE: fretes_web.settings.prod
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
 
   nginx:
-    image: ghcr.io/brunorimbanojunior/app_frete_web-nginx:${APP_IMAGE_TAG:-v2026.10.07-1}
+    image: ghcr.io/brunorimbanojunior/app_frete_web-nginx:${APP_IMAGE_TAG:-v2026.10.07-2}
     pull_policy: always
     build:
       context: .

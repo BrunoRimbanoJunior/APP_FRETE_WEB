@@ -5,11 +5,11 @@ HTTP na porta 8082. A stack de backup continua separada.
 
 ## Release atual
 
-A versão está em `VERSION`: **v2026.10.07-1**. O Git registra código, lockfile,
+A versão está em `VERSION`: **v2026.10.07-2**. O Git registra código, lockfile,
 Dockerfiles e configuração. As imagens compiladas são publicadas no GHCR:
 
-- `ghcr.io/brunorimbanojunior/app_frete_web:v2026.10.07-1`
-- `ghcr.io/brunorimbanojunior/app_frete_web-nginx:v2026.10.07-1`
+- `ghcr.io/brunorimbanojunior/app_frete_web:v2026.10.07-2`
+- `ghcr.io/brunorimbanojunior/app_frete_web-nginx:v2026.10.07-2`
 
 O CI executa testes de funcionalidade, navegador e proxy antes de publicar as
 duas imagens. Também publica tags do SHA do commit, da branch e `latest`.
@@ -40,7 +40,7 @@ Use `DJANGO_DEBUG=0`. Não versione `.env.prod` ou credenciais.
 ## Portainer
 
 1. Atualize a stack existente com `deploy/docker-compose.prod.yml` deste release.
-2. Nas variáveis da stack, defina `APP_IMAGE_TAG=v2026.10.07-1`, mantendo as demais.
+2. Nas variáveis da stack, defina `APP_IMAGE_TAG=v2026.10.07-2`, mantendo as demais.
 3. Faça pull das duas imagens e atualize a stack preservando banco, rede e volumes.
 4. Confira os logs do web, saúde do Nginx e as verificações funcionais abaixo.
 
@@ -55,7 +55,7 @@ O exemplo abaixo usa `.env.prod` como arquivo local de variáveis:
 
 ```bash
 export COMPOSE_PROJECT_NAME=nome_atual_da_stack
-export APP_IMAGE_TAG=v2026.10.07-1
+export APP_IMAGE_TAG=v2026.10.07-2
 
 git pull --ff-only origin hotfix/principal
 docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml config --quiet
@@ -94,6 +94,29 @@ docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml bui
 ```
 
 ## Validação depois do deploy
+
+### Servidor sem acesso ao GHCR ou à internet
+
+As bibliotecas do navegador e as dependências Python já fazem parte das imagens.
+Nenhum download de CDN, pip ou npm é executado ao iniciar o app. Se o servidor
+também não puder acessar o GHCR, transporte o pacote de imagens gerado no ambiente
+de desenvolvimento e carregue-o localmente. Copie as configurações deste release
+para o diretório da stack existente, mantendo seu `.env.prod`, nome e volumes.
+
+```bash
+docker load -i app-frete-v2026.10.07-2-images.tar
+export COMPOSE_PROJECT_NAME=nome_atual_da_stack
+export APP_IMAGE_TAG=v2026.10.07-2
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml -f deploy/docker-compose.offline.yml config --quiet
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml -f deploy/docker-compose.offline.yml run --rm --no-deps nginx nginx -t
+docker compose --env-file deploy/.env.prod -f deploy/docker-compose.prod.yml -f deploy/docker-compose.offline.yml up -d --no-deps --no-build --wait web nginx
+```
+
+Gere o backup descrito acima antes da atualização. O override usa `pull_policy:
+never` nas duas imagens; o PostgreSQL existente não é recriado. O pacote não contém
+credenciais ou banco de dados. Um nome de imagem/tag diferente do pacote causará
+erro local, sem tentar baixar outra versão. Depois confira o Network do navegador:
+Bootstrap/HTMX devem vir de `/static/vendor/`, no mesmo servidor da intranet.
 
 - `/` deve redirecionar para `/fretes/`, preservando a porta 8082.
 - Login, pedidos, clientes, produtos, garantias e relatórios devem abrir normalmente.

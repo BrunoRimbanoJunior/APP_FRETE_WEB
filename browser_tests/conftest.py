@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import urlsplit
 
 import pytest
 from django.contrib.auth.models import User
@@ -48,7 +49,30 @@ def dados(transactional_db):
 @pytest.fixture
 def page(browser, client, dados, live_server):
     client.force_login(dados["user"])
-    context = browser.new_context(viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True)
+    context = browser.new_context(
+        viewport={"width": 375, "height": 812}, is_mobile=True, has_touch=True,
+        service_workers="block",
+    )
+    origin = urlsplit(live_server.url)
+    external_requests = []
+    asset_failures = []
+
+    def intranet_only(route):
+        url = urlsplit(route.request.url)
+        if url.scheme in ("http", "https") and (url.scheme, url.netloc) != (origin.scheme, origin.netloc):
+            external_requests.append(route.request.url)
+            route.abort(error_code="blockedbyclient")
+        else:
+            route.continue_()
+
+    context.route("**/*", intranet_only)
+    assets = {"stylesheet", "script", "image", "font"}
+    context.on("response", lambda response: asset_failures.append(
+        (response.url, response.status)
+    ) if response.request.resource_type in assets and response.status >= 400 else None)
+    context.on("requestfailed", lambda request: asset_failures.append(
+        (request.url, request.failure)
+    ) if request.resource_type in assets else None)
     context.add_cookies([{
         "name": django_settings.SESSION_COOKIE_NAME,
         "value": client.cookies[django_settings.SESSION_COOKIE_NAME].value,
@@ -60,6 +84,8 @@ def page(browser, client, dados, live_server):
     yield tab
     context.close()
     assert not errors, errors
+    assert not external_requests, external_requests
+    assert not asset_failures, asset_failures
 
 
 @pytest.fixture

@@ -2,11 +2,11 @@
 
 ## Release para producao
 
-Versao atual: **v2026.10.07-1**, registrada em `VERSION`.
+Versao atual: **v2026.10.07-2**, registrada em `VERSION`.
 O CI publica app e Nginx no GHCR depois dos testes:
 
-- `ghcr.io/brunorimbanojunior/app_frete_web:v2026.10.07-1`
-- `ghcr.io/brunorimbanojunior/app_frete_web-nginx:v2026.10.07-1`
+- `ghcr.io/brunorimbanojunior/app_frete_web:v2026.10.07-2`
+- `ghcr.io/brunorimbanojunior/app_frete_web-nginx:v2026.10.07-2`
 
 O Compose de producao usa essa versao para as duas imagens. `APP_IMAGE_TAG`
 permite selecionar outro release. Para deploy/backup/rollback da stack existente,
@@ -121,6 +121,29 @@ docker compose up -d --remove-orphans db web nginx auto-backup
 - O cálculo mostra carregamento, bloqueia envio duplicado e permite tentar novamente após erro.
 - Bootstrap 5.3.8 e HTMX 2.0.11 são servidos localmente, com hashes de integridade.
 - WhiteNoise gera versões gzip e Brotli dos estáticos durante `collectstatic`.
+
+### Intranet sem acesso a CDNs
+
+Bootstrap e HTMX fazem parte da imagem Docker. CSS, scripts, imagens e arquivos
+do Django Admin sao carregados do proprio servidor, em `/static/`.
+Os SVGs `data:image/svg+xml` do Bootstrap estao embutidos no CSS e nao fazem
+requisicoes externas. Nao ha fontes externas ou Popper carregado pelo app.
+
+Todos os testes de navegador bloqueiam origens externas e falham diante de
+uma tentativa de conexao externa ou erro ao carregar CSS/JS/imagem/fonte.
+O teste de intranet abre 21 telas e o Admin em celular/desktop com cache vazio,
+confere Bootstrap, logo e buscas HTMX. Os demais testes exercitam cadastro,
+calculo e menus com o mesmo bloqueio de rede.
+
+Se o painel Network de producao mostrar `cdn.jsdelivr.net`, o HTML recebido
+ainda nao corresponde aos templates locais deste release. Confira a imagem
+do container web, faca pull e recrie-o conforme DEPLOY.md. Depois recarregue
+com o cache do navegador desativado. As URLs de origem em `static/vendor/README.md`
+sao apenas documentacao; nao sao usadas durante o carregamento do app.
+
+Se o servidor tambem nao acessar o GHCR, use `docker load` com o pacote local
+das duas imagens e `deploy/docker-compose.offline.yml`, conforme DEPLOY.md.
+Esse override impede downloads de imagens no deploy da stack existente.
 
 ## Dependências e testes
 

@@ -1,0 +1,7 @@
+# Use junto de docker-compose.prod.yml depois de docker load do pacote local.
+# Atualize somente web/nginx com --no-deps --no-build, preservando o DB existente.
+services:
+  web:
+    pull_policy: never
+  nginx:
+    pull_policy: never

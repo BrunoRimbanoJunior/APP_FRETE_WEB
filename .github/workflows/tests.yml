@@ -74,5 +74,5 @@ jobs:
           python manage.py collectstatic --noinput
       - name: Functional tests
         run: python -m pytest -q fretes/tests
-      - name: Browser and mobile tests
+      - name: Browser, mobile and intranet tests without external access
         run: python -m pytest -q browser_tests
